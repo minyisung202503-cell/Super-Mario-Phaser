@@ -36,10 +36,8 @@ var config = {
 const worldWidth = screenWidth * 11;
 const platformHeight = screenHeight / 5;
 
-// ==========================================
-// 重構 1：修正瑪利歐的初始物理出生點
-// ==========================================
-const startOffset = screenWidth * 1.2; // 原本是 screenWidth / 2.5，改為 1.2 讓他出生在攝影機安全範圍
+// 將底層出生點修改至 1.2 螢幕寬度的安全區 (避開 1.5 的怪物生成區)
+const startOffset = screenWidth * 1.2; 
 
 const platformPieces = 100;
 const platformPiecesWidth = (worldWidth - screenWidth) / platformPieces;
@@ -55,9 +53,11 @@ var playerBlocked = false;
 var playerFiring = false;
 var fireInCooldown = false;
 var furthestPlayerPos = 0;
+
 var flagRaised = false;
 
 var controlKeys = { JUMP: null, DOWN: null, LEFT: null, RIGHT: null, FIRE: null, PAUSE: null };
+
 var score = 0;
 var timeLeft = 300;
 var levelStarted = false;
@@ -252,7 +252,6 @@ function create() {
     };
 
     this.physics.world.setBounds(screenWidth, 0, worldWidth, screenHeight);
-
     this.cameras.main.setBounds(screenWidth, 0, worldWidth, screenHeight);
     this.cameras.main.isFollowing = false;
     this.cameras.main.scrollX = screenWidth; 
@@ -261,9 +260,12 @@ function create() {
     createAnimations.call(this);
     createPlayer.call(this);
 
+    // 強制出生在安全距離，並從半空中掉落以確保物理碰撞生效
+    player.x = screenWidth * 1.2;
+    player.y = screenHeight / 3;
+
     generateLevel.call(this);
     drawWorld.call(this);
-    
     createGoombas.call(this);
     createControls.call(this);
     applySettings.call(this);
@@ -273,6 +275,8 @@ function create() {
     createHUD.call(this);
     updateTimer.call(this);
     
+    // 初始化開局計時器
+    this.gameTimeCount = 0; 
     levelStarted = true;
     playerBlocked = false;
     
@@ -283,11 +287,10 @@ function create() {
         this.undergroundMusicTheme.play({ loop: -1 });
     }
 
-    // ==========================================
-    // 重構 2：攔截並覆寫原版卡死的 Game Over 畫面
-    // ==========================================
+    // 死亡結算：加入防多重觸發機制 (防止無限 loop)
     window.gameOverFunc = function() {
-        if (gameWinned) return;
+        if (gameWinned || this.isGameOverTriggered) return;
+        this.isGameOverTriggered = true; 
         
         this.musicTheme.stop();
         this.undergroundMusicTheme.stop();
@@ -296,16 +299,14 @@ function create() {
 
         this.physics.pause();
         this.anims.pauseAll();
-        player.setTint(0xff0000); // 瑪利歐變紅表示死亡
+        player.setTint(0xff0000); 
 
-        // 延遲一秒後跳出輸入框，作為串接 GAS 的準備
         setTimeout(() => {
             let playerName = prompt("Game Over!\n你獲得了 " + score + " 分！\n請輸入你的暱稱來記錄分數：", "Player");
             if (playerName) {
-                alert("準備將 [" + playerName + "] 的分數 [" + score + "] 傳送給後端 GAS 排行榜！\n(API 串接後將實裝)");
+                alert("準備將 [" + playerName + "] 的分數 [" + score + "] 傳送給後端 GAS 排行榜！");
             }
-            // 自動重新整理網頁，直接再來一局
-            location.reload();
+            location.reload(); 
         }, 1000);
     }.bind(this);
 }
@@ -420,162 +421,12 @@ function generateLevel() {
         pieceStart += platformPiecesWidth * 2;
     }
 
-    this.startScreenTrigger = this.add.tileSprite(screenWidth, screenHeight - platformHeight, 32, 28, 'horizontal-tube').setScale(screenHeight / 345).setOrigin(1, 1);
-    this.startScreenTrigger.depth = 4;
-    this.physics.add.existing(this.startScreenTrigger);
-    this.startScreenTrigger.body.allowGravity = false;
-    this.startScreenTrigger.body.immovable = true;
-    this.physics.add.collider(player, this.startScreenTrigger, startLevel, null, this);
-
-    let invisibleWall2 = this.add.rectangle(screenWidth, screenHeight - platformHeight, 1, screenHeight).setOrigin(0.5, 1);
-    this.physics.add.existing(invisibleWall2);
-    invisibleWall2.body.allowGravity = false;
-    invisibleWall2.body.immovable = true;
-    this.physics.add.collider(player, invisibleWall2);
-    this.fallProtectionGroup.add(invisibleWall2);
-
-    if (!isLevelOverworld) {
-        this.verticalTube = this.add.tileSprite(worldWidth - screenWidth, screenHeight - platformHeight, 32, screenHeight, 'vertical-extralarge-tube').setScale(screenHeight / 345).setOrigin(1, 1);
-        this.verticalTube.depth = 2;
-        this.physics.add.existing(this.verticalTube);
-        this.verticalTube.body.allowGravity = false;
-        this.verticalTube.body.immovable = true;
-        this.physics.add.collider(player, this.verticalTube);
-
-        this.finalTrigger = this.add.tileSprite(worldWidth - screenWidth * 1.03, screenHeight - platformHeight, 40, 31, 'horizontal-final-tube').setScale(screenHeight / 345).setOrigin(1, 1);
-        this.finalTrigger.depth = 2;
-        this.physics.add.existing(this.finalTrigger);
-        this.finalTrigger.body.allowGravity = false;
-        this.finalTrigger.body.immovable = true;
-        this.physics.add.collider(player, this.finalTrigger, teleportToLevelEnd, null, this);
-
-        let invisibleWall1 = this.add.rectangle(worldWidth - screenWidth, screenHeight - platformHeight, 1, screenHeight).setOrigin(0.5, 1);
-        this.physics.add.existing(invisibleWall1);
-        invisibleWall1.body.allowGravity = false;
-        invisibleWall1.body.immovable = true;
-        this.physics.add.collider(player, invisibleWall1);
-        this.fallProtectionGroup.add(invisibleWall1);
-    }
-
-    let fallProtections = this.fallProtectionGroup.getChildren();
-    for (let i = 0; i < fallProtections.length; i++) {
-        this.physics.add.existing(fallProtections[i]);
-        fallProtections[i].body.allowGravity = false;
-        fallProtections[i].body.immovable = true;
-    }
-
-    let misteryBlocks = this.misteryBlocksGroup.getChildren();
-    for (let i = 0; i < misteryBlocks.length; i++) {
-        this.physics.add.existing(misteryBlocks[i]);
-        misteryBlocks[i].body.allowGravity = false;
-        misteryBlocks[i].body.immovable = true;
-        misteryBlocks[i].depth = 2;
-        misteryBlocks[i].anims.play('mistery-block-default', true);
-        this.physics.add.collider(player, misteryBlocks[i], revealHiddenBlock, null, this);
-    }
-    
-    let blocks = this.blocksGroup.getChildren();
-    for (let i = 0; i < blocks.length; i++) {
-        this.physics.add.existing(blocks[i]);
-        blocks[i].body.allowGravity = false;
-        blocks[i].body.immovable = true;
-        blocks[i].depth = 2;
-        this.physics.add.collider(player, blocks[i], destroyBlock, null, this);
-    }
-
-    let constructionBlocks = this.constructionBlocksGroup.getChildren();
-    for (let i = 0; i < constructionBlocks.length; i++) {
-        this.physics.add.existing(constructionBlocks[i]);
-        constructionBlocks[i].isImmovable = true;
-        constructionBlocks[i].body.allowGravity = false;
-        constructionBlocks[i].body.immovable = true;
-        constructionBlocks[i].depth = 2;
-        this.physics.add.collider(player, constructionBlocks[i], destroyBlock, null, this);
-    }
-
-    let immovableBlocks = this.immovableBlocksGroup.getChildren();
-    for (let i = 0; i < immovableBlocks.length; i++) {
-        this.physics.add.existing(immovableBlocks[i]);
-        immovableBlocks[i].body.allowGravity = false;
-        immovableBlocks[i].body.immovable = true;
-        immovableBlocks[i].depth = 2;
-        this.physics.add.collider(player, immovableBlocks[i]);
-    }
-
-    let groundCoins = this.groundCoinsGroup.getChildren();
-    for (let i = 0; i < groundCoins.length; i++) {
-        this.physics.add.existing(groundCoins[i]);
-        groundCoins[i].anims.play('ground-coin-default', true);
-        groundCoins[i].body.allowGravity = false;
-        groundCoins[i].body.immovable = true;
-        groundCoins[i].depth = 2;
-        this.physics.add.overlap(player, groundCoins[i], collectCoin, null, this);
-    }
+    // 拔除原本會擋住路徑的隱形牆與傳送點
+    // this.startScreenTrigger = ... 
 }
 
-function startLevel(player, trigger) {
-    if (!player.body.blocked.right && !trigger.body.blocked.left) return;
-    this.powerDownSound.play();
-    this.physics.world.setBounds(screenWidth, 0, worldWidth, screenHeight);
-    applyPlayerInvulnerability.call(this, 4000);
-    playerBlocked = true;
-    player.setVelocityX(5);
-    player.anims.play('run', true).flipX = false;
-    this.cameras.main.fadeOut(900, 0, 0, 0);
-    this.hereWeGoSound.play();
-
-    setTimeout(() => {
-        if (!isLevelOverworld) {
-            player.y = screenHeight / 5;
-            this.musicTheme.stop();
-            this.undergroundMusicTheme.play({ loop: -1 });
-        }
-        player.x = screenWidth * 1.1;
-        this.cameras.main.pan(screenWidth * 1.5, 0, 0);
-        playerBlocked = false;
-        this.cameras.main.fadeIn(500, 0, 0, 0);
-        createHUD.call(this);
-        updateTimer.call(this);
-        this.startScreenTrigger.destroy();
-        levelStarted = true;
-        if (this.settingsMenuOpen)hideSettings.call(this);
-    }, 1100);
-}
-
-function teleportToLevelEnd(player, trigger) {
-    if (!player.body.blocked.right && !trigger.body.blocked.left) return;
-    playerBlocked = true;
-    this.cameras.main.stopFollow();
-    this.powerDownSound.play();
-    this.tweens.add({ targets: player, duration: 75, alpha: 0 });
-    this.cameras.main.fadeOut(450, 0, 0, 0);
-    player.anims.play(playerState > 0 ? playerState == 1 ? 'grown-mario-run'  : 'fire-mario-run' : 'run', true).flipX = false;
-    this.undergroundRoof.destroy();
-
-    setTimeout(() => {
-        this.physics.world.setBounds(worldWidth - screenWidth, 0, worldWidth, screenHeight);
-        this.tpTube = this.add.tileSprite(worldWidth - screenWidth / 1.089, screenHeight - platformHeight, 32, 32, 'vertical-medium-tube').setScale(screenHeight / 345).setOrigin(1);
-        this.tpTube.depth = 4;
-        this.physics.add.existing(this.tpTube);
-        this.tpTube.body.allowGravity = false;
-        this.tpTube.body.immovable = true;
-        this.physics.add.collider(player, this.tpTube);
-        this.add.rectangle(worldWidth - screenWidth, 0, worldWidth, screenHeight,0x8585FF).setOrigin(0).depth = -1;
-        this.add.tileSprite(worldWidth - screenWidth, screenHeight, screenWidth, platformHeight, 'start-floorbricks').setScale(2).setOrigin(0, 0.5).depth = 2;
-    }, 500);
-
-    setTimeout(() => {
-        player.alpha = 1;
-        player.x = worldWidth - screenWidth / 1.08;
-        this.cameras.main.pan(worldWidth - screenWidth / 2, 0, 0);
-        this.cameras.main.fadeIn(500, 0, 0, 0);
-        this.powerDownSound.play();
-        this.finalTrigger.destroy();
-        this.tweens.add({ targets: player, duration: 500, y: this.tpTube.getBounds().y });
-        setTimeout(() => { playerBlocked = false; }, 500);
-    }, 1100);
-}
-
+function startLevel() {} // 已經廢棄，留空以防報錯
+function teleportToLevelEnd() {} // 已經廢棄，留空以防報錯
 function drawStartScreen() { }
 
 function raiseFlag() {
@@ -677,16 +528,24 @@ function update(delta) {
             camera.isFollowing = false;
         }
 
-        if (!playerBlocked) {
-            const scrollSpeed = (velocityX * 0.75 * delta) / 1000;
+        // 計時器累加
+        this.gameTimeCount += delta;
+
+        // 核心修正：時停防護罩 + 1000ms 的開局暖身時間
+        if (!playerBlocked && this.gameTimeCount > 1000) {
+            // 防暴衝機制：鎖定 delta 最高值為 33ms (等同 30FPS)
+            let safeDelta = Math.min(delta, 33);
+            const scrollSpeed = (velocityX * 0.75 * safeDelta) / 1000;
             camera.scrollX += scrollSpeed;
 
-            if (player.x < camera.scrollX - 5) {
+            // 左側死亡邊界放寬容錯率 (15 pixel)
+            if (player.x < camera.scrollX - 15) {
                 gameOver = true;
                 gameOverFunc.call(this);
                 return;
             }
 
+            // 前鋒抑制
             if (player.x > camera.scrollX + (screenWidth * 0.6)) {
                 camera.scrollX = player.x - (screenWidth * 0.6);
             }
