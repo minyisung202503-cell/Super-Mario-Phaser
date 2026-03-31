@@ -36,19 +36,17 @@ var config = {
 const worldWidth = screenWidth * 11;
 const platformHeight = screenHeight / 5;
 
-const startOffset = screenWidth / 2.5;
+// ==========================================
+// 重構 1：修正瑪利歐的初始物理出生點
+// ==========================================
+const startOffset = screenWidth * 1.2; // 原本是 screenWidth / 2.5，改為 1.2 讓他出生在攝影機安全範圍
 
-// Hole with is calculated dividing the world width in x holes of the same size.
 const platformPieces = 100;
 const platformPiecesWidth = (worldWidth - screenWidth) / platformPieces;
 
 var isLevelOverworld;
-
-// Create empty holes array, every hole will have their object with the hole start and end
 var worldHolesCoords = [];
-
 var emptyBlocksList = [];
-
 var player;
 var playerController;
 var playerState = 0;
@@ -57,24 +55,13 @@ var playerBlocked = false;
 var playerFiring = false;
 var fireInCooldown = false;
 var furthestPlayerPos = 0;
-
 var flagRaised = false;
 
-var controlKeys = {
-    JUMP: null,
-    DOWN: null,
-    LEFT: null,
-    RIGHT: null,
-    FIRE: null,
-    PAUSE: null
-};
-
+var controlKeys = { JUMP: null, DOWN: null, LEFT: null, RIGHT: null, FIRE: null, PAUSE: null };
 var score = 0;
 var timeLeft = 300;
-
 var levelStarted = false;
 var reachedLevelEnd = false;
-
 var smoothedControls;
 var gameOver = false;
 var gameWinned = false;
@@ -86,29 +73,23 @@ function isMobileDevice() {
 }
 
 var SmoothedHorionztalControl = new Phaser.Class({
-    initialize:
-    function SmoothedHorionztalControl(speed) {
+    initialize: function SmoothedHorionztalControl(speed) {
             this.msSpeed = speed;
             this.value = 0;
     },
-
     moveLeft: function(delta) {
         if (this.value > 0) { this.reset(); }
         this.value -= this.msSpeed * 3.5;
         if (this.value < -1) { this.value = -1; }
         playerController.time.rightDown += delta;
     },
-
     moveRight: function(delta) {
         if (this.value < 0) { this.reset(); }
         this.value += this.msSpeed * 3.5;
         if (this.value > 1) { this.value = 1; }
         playerController.time.leftDown += delta;
     },
-
-    reset: function() {
-        this.value = 0;
-    }
+    reset: function() { this.value = 0; }
 });
 
 function preload() {
@@ -121,13 +102,8 @@ function preload() {
     var height = this.cameras.main.height;
     
     var percentText = this.make.text({
-        x: width / 2,
-        y: height / 2 * 1.25,
-        text: '0%',
-        style: {
-            font: screenWidth / 96 + 'px pixel_nums',
-            fill: '#ffffff'
-        }
+        x: width / 2, y: height / 2 * 1.25, text: '0%',
+        style: { font: screenWidth / 96 + 'px pixel_nums', fill: '#ffffff' }
     });
     percentText.setOrigin(0.5, 0.5);
     
@@ -145,10 +121,7 @@ function preload() {
         loadingGif.forEach(gif => {gif.style.display = 'none';});
     });
 
-    // Load Fonts
     this.load.bitmapFont('carrier_command', 'assets/fonts/carrier_command.png', 'assets/fonts/carrier_command.xml');
-
-    // Load plugins
     this.load.plugin('rexvirtualjoystickplugin', 'https://raw.githubusercontent.com/rexrainbow/phaser3-rex-notes/master/dist/rexvirtualjoystickplugin.min.js', true);
     this.load.plugin('rexcheckboxplugin', 'https://raw.githubusercontent.com/rexrainbow/phaser3-rex-notes/master/dist/rexcheckboxplugin.min.js', true);
     this.load.plugin('rexsliderplugin', 'https://raw.githubusercontent.com/rexrainbow/phaser3-rex-notes/master/dist/rexsliderplugin.min.js', true);
@@ -157,7 +130,6 @@ function preload() {
     isLevelOverworld = Phaser.Math.Between(0, 100) <= 84;
     let levelStyle = isLevelOverworld ? 'overworld' : 'underground';
 
-    // Load entities sprites
     this.load.spritesheet('mario', 'assets/entities/mario.png', { frameWidth: 18, frameHeight: 16 });
     this.load.spritesheet('mario-grown', 'assets/entities/mario-grown.png', { frameWidth: 18, frameHeight: 32 });
     this.load.spritesheet('mario-fire', 'assets/entities/mario-fire.png', { frameWidth: 18, frameHeight: 32 });
@@ -165,11 +137,9 @@ function preload() {
     this.load.spritesheet('koopa', 'assets/entities/koopa.png', { frameWidth: 16, frameHeight: 24 });
     this.load.spritesheet('shell', 'assets/entities/shell.png', { frameWidth: 16, frameHeight: 15 });
 
-    // Load objects sprites
     this.load.spritesheet('fireball', 'assets/entities/fireball.png', { frameWidth: 8, frameHeight: 8 });
     this.load.spritesheet('fireball-explosion', 'assets/entities/fireball-explosion.png', { frameWidth: 16, frameHeight: 16 });
 
-    // Load props
     this.load.image('cloud1', 'assets/scenery/overworld/cloud1.png');
     this.load.image('cloud2', 'assets/scenery/overworld/cloud2.png');
     this.load.image('mountain1', 'assets/scenery/overworld/mountain1.png');
@@ -182,7 +152,6 @@ function preload() {
     this.load.image('final-flag', 'assets/scenery/final-flag.png');
     this.load.image('sign', 'assets/scenery/sign.png');
 
-    // Load tubes
     this.load.image('horizontal-tube', 'assets/scenery/horizontal-tube.png');
     this.load.image('horizontal-final-tube', 'assets/scenery/horizontal-final-tube.png');
     this.load.image('vertical-extralarge-tube', 'assets/scenery/vertical-large-tube.png');
@@ -190,12 +159,10 @@ function preload() {
     this.load.image('vertical-medium-tube', 'assets/scenery/vertical-medium-tube.png');
     this.load.image('vertical-large-tube', 'assets/scenery/vertical-large-tube.png');
     
-    // Load HUD images
     this.load.image('gear', 'assets/hud/gear.png');
     this.load.image('settings-bubble', 'assets/hud/settings-bubble.png');
     this.load.spritesheet('npc', 'assets/hud/npc.png', { frameWidth: 16, frameHeight: 24 });
 
-    // Load platform bricks and structures
     this.load.image('floorbricks', 'assets/scenery/' + levelStyle + '/floorbricks.png');
     this.load.image('start-floorbricks', 'assets/scenery/overworld/floorbricks.png');
     this.load.image('block', 'assets/blocks/' + levelStyle + '/block.png');
@@ -206,14 +173,12 @@ function preload() {
     this.load.spritesheet('mistery-block', 'assets/blocks/' + levelStyle + '/misteryBlock.png', { frameWidth: 16, frameHeight: 16 });
     this.load.spritesheet('custom-block', 'assets/blocks/overworld/customBlock.png', { frameWidth: 16, frameHeight: 16 });
 
-    // Load collectibles
     this.load.spritesheet('coin', 'assets/collectibles/coin.png', { frameWidth: 16, frameHeight: 16 });
     this.load.spritesheet('ground-coin', 'assets/collectibles/underground/ground-coin.png', { frameWidth: 10, frameHeight: 14 });
     this.load.spritesheet('fire-flower', 'assets/collectibles/' + levelStyle + '/fire-flower.png', { frameWidth: 16, frameHeight: 16 });
     this.load.image('live-mushroom', 'assets/collectibles/live-mushroom.png');
     this.load.image('super-mushroom', 'assets/collectibles/super-mushroom.png');
 
-    // Load sounds and music
     this.load.audio('music', 'assets/sound/music/overworld/theme.mp3');
     this.load.audio('underground-music', 'assets/sound/music/underground/theme.mp3');
     this.load.audio('hurry-up-music', 'assets/sound/music/' + levelStyle +'/hurry-up-theme.mp3');
@@ -238,69 +203,47 @@ function preload() {
 function initSounds() {
     this.musicGroup = this.add.group();
     this.effectsGroup = this.add.group();
-
     this.musicTheme = this.sound.add('music', { volume: 0.15 });
     this.musicTheme.play({ loop: -1 });
     this.musicGroup.add(this.musicTheme);
-
     this.undergroundMusicTheme = this.sound.add('underground-music', { volume: 0.15 });
     this.musicGroup.add(this.undergroundMusicTheme);
-
     this.hurryMusicTheme = this.sound.add('hurry-up-music', { volume: 0.15 });
     this.musicGroup.add(this.hurryMusicTheme);
-
     this.gameOverSong = this.sound.add('gameoversong', { volume: 0.3 });
     this.musicGroup.add(this.gameOverSong);
-        
     this.winSound = this.sound.add('win', { volume: 0.3 });
     this.musicGroup.add(this.winSound);
-
     this.jumpSound = this.sound.add('jumpsound', { volume: 0.10 });
     this.effectsGroup.add(this.jumpSound);
-
     this.coinSound = this.sound.add('coin', { volume: 0.2 });
     this.effectsGroup.add(this.coinSound);
-
     this.powerUpAppearsSound = this.sound.add('powerup-appears', { volume: 0.2 });
     this.effectsGroup.add(this.powerUpAppearsSound);
-
     this.consumePowerUpSound = this.sound.add('consume-powerup', { volume: 0.2 });
     this.effectsGroup.add(this.consumePowerUpSound);
-
     this.powerDownSound = this.sound.add('powerdown', { volume: 0.3 });
     this.effectsGroup.add(this.powerDownSound);
-
     this.goombaStompSound = this.sound.add('goomba-stomp', { volume: 1 });
     this.effectsGroup.add(this.goombaStompSound);
-
     this.flagPoleSound = this.sound.add('flagpole', { volume: 0.3 });
     this.effectsGroup.add(this.flagPoleSound);
-
     this.fireballSound = this.sound.add('fireball', { volume: 0.3 });
     this.effectsGroup.add(this.fireballSound);
-
     this.kickSound = this.sound.add('kick', { volume: 0.3 });
     this.effectsGroup.add(this.kickSound);
-
     this.timeWarningSound = this.sound.add('time-warning', { volume: 0.2 });
     this.effectsGroup.add(this.timeWarningSound);
-
     this.hereWeGoSound = this.sound.add('here-we-go', { volume: 0.17 });
     this.effectsGroup.add(this.hereWeGoSound);
-
     this.pauseSound = this.sound.add('pauseSound', { volume: 0.17 });
     this.effectsGroup.add(this.pauseSound);
-
     this.blockBumpSound = this.sound.add('block-bump', { volume: 0.3 });
     this.effectsGroup.add(this.blockBumpSound);
-
     this.breakBlockSound = this.sound.add('break-block', { volume: 0.5 });
     this.effectsGroup.add(this.breakBlockSound);
 }
 
-// ==========================================
-// 重構：強制跳過開始畫面，直接啟動跑酷模式
-// ==========================================
 function create() {
     playerController = {
         time: { leftDown: 0, rightDown: 0 },
@@ -308,10 +251,8 @@ function create() {
         speed: { run: velocityX }
     };
 
-    // 1. 縮小世界邊界，直接從真正的關卡起點開始
     this.physics.world.setBounds(screenWidth, 0, worldWidth, screenHeight);
 
-    // 2. 攝影機直接對準起點，不從 0 開始
     this.cameras.main.setBounds(screenWidth, 0, worldWidth, screenHeight);
     this.cameras.main.isFollowing = false;
     this.cameras.main.scrollX = screenWidth; 
@@ -320,36 +261,53 @@ function create() {
     createAnimations.call(this);
     createPlayer.call(this);
 
-    // 3. 將瑪利歐直接傳送到真正的起跑線 (跳過展示間)
-    player.x = screenWidth * 1.1;
-
     generateLevel.call(this);
     drawWorld.call(this);
     
-    // 4. 徹底刪除展示間 (註解掉 drawStartScreen)
-    // drawStartScreen.call(this); 
-
     createGoombas.call(this);
     createControls.call(this);
     applySettings.call(this);
     
     smoothedControls = new SmoothedHorionztalControl(0.001);
 
-    // 5. 強制觸發關卡開始狀態，解鎖攝影機與瑪利歐
-    createHUD.call(this);       // 補上儀表板 UI
-    updateTimer.call(this);     // 補上倒數計時器
+    createHUD.call(this);
+    updateTimer.call(this);
     
     levelStarted = true;
     playerBlocked = false;
     
-    // 播放經典的 Here We Go 語音
     this.hereWeGoSound.play(); 
 
-    // 修正地下關卡的音樂邏輯
     if (!isLevelOverworld) {
         this.musicTheme.stop();
         this.undergroundMusicTheme.play({ loop: -1 });
     }
+
+    // ==========================================
+    // 重構 2：攔截並覆寫原版卡死的 Game Over 畫面
+    // ==========================================
+    window.gameOverFunc = function() {
+        if (gameWinned) return;
+        
+        this.musicTheme.stop();
+        this.undergroundMusicTheme.stop();
+        this.hurryMusicTheme.stop();
+        this.gameOverSong.play();
+
+        this.physics.pause();
+        this.anims.pauseAll();
+        player.setTint(0xff0000); // 瑪利歐變紅表示死亡
+
+        // 延遲一秒後跳出輸入框，作為串接 GAS 的準備
+        setTimeout(() => {
+            let playerName = prompt("Game Over!\n你獲得了 " + score + " 分！\n請輸入你的暱稱來記錄分數：", "Player");
+            if (playerName) {
+                alert("準備將 [" + playerName + "] 的分數 [" + score + "] 傳送給後端 GAS 排行榜！\n(API 串接後將實裝)");
+            }
+            // 自動重新整理網頁，直接再來一局
+            location.reload();
+        }, 1000);
+    }.bind(this);
 }
 
 function createControls() {
@@ -370,68 +328,41 @@ function createControls() {
     });
 }
 
-
 function generateRandomCoordinate(entitie = false, ground = true) {
     const startPos = entitie ? screenWidth * 1.5 : screenWidth;
     const endPos = entitie ? worldWidth - screenWidth * 3 : worldWidth;
-  
     let coordinate = Phaser.Math.Between(startPos, endPos);
-  
     if (!ground) return coordinate;
-  
     for (let hole of worldHolesCoords) {
       if (coordinate >= hole.start - platformPiecesWidth * 1.5 && coordinate <= hole.end) {
         return generateRandomCoordinate.call(this, entitie, ground);
       }
     }
-  
     return coordinate;
-  }
+}
   
-// World generation
 function drawWorld() {
     this.add.rectangle(screenWidth, 0,worldWidth, screenHeight, isLevelOverworld ? 0x8585FF : 0x000000).setOrigin(0).depth = -1;
-
     let propsY = screenHeight - platformHeight;
-
     if (isLevelOverworld) {
         for (i = 0; i < Phaser.Math.Between(Math.trunc(worldWidth / 760), Math.trunc(worldWidth / 380)); i++) {
             let x = generateRandomCoordinate(false, false);
             let y = Phaser.Math.Between(screenHeight / 80, screenHeight / 2.2);
-            if (Phaser.Math.Between(0, 10) < 5) {
-                this.add.image(x, y, 'cloud1').setOrigin(0).setScale(screenHeight / 1725);
-            } else {
-                this.add.image(x, y, 'cloud2').setOrigin(0).setScale(screenHeight / 1725);
-            }
+            this.add.image(x, y, Phaser.Math.Between(0, 10) < 5 ? 'cloud1' : 'cloud2').setOrigin(0).setScale(screenHeight / 1725);
         }
-
         for (i = 0; i < Phaser.Math.Between(worldWidth / 6400, worldWidth / 3800); i++) {
             let x = generateRandomCoordinate();
-
-            if (Phaser.Math.Between(0, 10) < 5) {
-                this.add.image(x, propsY, 'mountain1').setOrigin(0, 1).setScale(screenHeight / 517);
-            } else {
-                this.add.image(x, propsY, 'mountain2').setOrigin(0, 1).setScale(screenHeight / 517);
-            }
+            this.add.image(x, propsY, Phaser.Math.Between(0, 10) < 5 ? 'mountain1' : 'mountain2').setOrigin(0, 1).setScale(screenHeight / 517);
         }
-        
         for (i = 0; i < Phaser.Math.Between(Math.trunc(worldWidth / 960), Math.trunc(worldWidth / 760)); i++) {
             let x = generateRandomCoordinate();
-
-            if (Phaser.Math.Between(0, 10) < 5) {
-                this.add.image(x, propsY, 'bush1').setOrigin(0, 1).setScale(screenHeight / 609);
-            } else {
-                this.add.image(x, propsY, 'bush2').setOrigin(0, 1).setScale(screenHeight / 609);
-            }
+            this.add.image(x, propsY, Phaser.Math.Between(0, 10) < 5 ? 'bush1' : 'bush2').setOrigin(0, 1).setScale(screenHeight / 609);
         }
-
         for (i = 0; i < Phaser.Math.Between(Math.trunc(worldWidth / 4000), Math.trunc(worldWidth / 2000)); i++) {
             let x = generateRandomCoordinate();
-
             this.add.tileSprite(x, propsY, Phaser.Math.Between(100, 250), 35, 'fence').setOrigin(0, 1).setScale(screenHeight / 863);
         }
     }
-
     this.finalFlagMast = this.add.tileSprite(worldWidth - (worldWidth / 30), propsY, 16, 167, 'flag-mast').setOrigin(0, 1).setScale(screenHeight / 400);
     this.physics.add.existing(this.finalFlagMast);
     this.finalFlagMast.immovable = true;
@@ -439,10 +370,8 @@ function drawWorld() {
     this.finalFlagMast.body.setSize(3, 167);
     this.physics.add.overlap(player, this.finalFlagMast, null, raiseFlag, this);
     this.physics.add.collider(this.platformGroup.getChildren(), this.finalFlagMast);
-
     this.finalFlag = this.add.image(worldWidth - (worldWidth / 30), propsY * 0.93, 'final-flag').setOrigin(0.5, 1);
     this.finalFlag.setScale(screenHeight / 400);
-
     this.add.image(worldWidth - (worldWidth / 75), propsY, 'castle').setOrigin(0.5, 1).setScale(screenHeight / 300);
 }
 
@@ -470,7 +399,6 @@ function generateLevel() {
 
         if (pieceStart >= (lastWasHole > 0 || lastWasStructure > 0 || worldWidth - platformPiecesWidth * 4) || number <= 0 || pieceStart <= screenWidth * 2 || pieceStart >= worldWidth - screenWidth * 2) {
             lastWasHole--;
-
             let Npiece = this.add.tileSprite(pieceStart, screenHeight, platformPiecesWidth, platformHeight, 'floorbricks').setScale(2).setOrigin(0, 0.5);
             this.physics.add.existing(Npiece);
             Npiece.body.immovable = true;
@@ -482,10 +410,7 @@ function generateLevel() {
 
             if (!(pieceStart >= (worldWidth - screenWidth * (isLevelOverworld ? 1 : 1.5))) && pieceStart > (screenWidth + platformPiecesWidth * 2) && lastWasHole < 1 && lastWasStructure < 1) {
                 lastWasStructure = generateStructure.call(this, pieceStart);
-            }
-            else {
-                lastWasStructure--;
-            }
+            } else { lastWasStructure--; }
         } else {
             worldHolesCoords.push({ start: pieceStart, end: pieceStart + platformPiecesWidth * 2});
             lastWasHole = 2;
@@ -651,7 +576,6 @@ function teleportToLevelEnd(player, trigger) {
     }, 1100);
 }
 
-// 已經不用的展示間，但保留函式宣告以免其他地方報錯
 function drawStartScreen() { }
 
 function raiseFlag() {
@@ -740,9 +664,6 @@ function collectCoin(player, coin) {
     coin.destroy();
 }
 
-// ==========================================
-// 重構：強制畫面推進與左側死亡邊界
-// ==========================================
 function update(delta) {
     if (gameOver || gameWinned) return;
 
