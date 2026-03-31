@@ -321,6 +321,7 @@ function create() {
     }.bind(this);
 
     // 死亡時：徹底銷毀所有記憶卡，打回原形
+    // 死亡時：徹底銷毀所有記憶卡，打回原形
     window.gameOverFunc = function() {
         if (gameWinned || this.isGameOverTriggered) return;
         this.isGameOverTriggered = true; 
@@ -340,26 +341,29 @@ function create() {
         localStorage.removeItem('mario_level');
 
         setTimeout(() => {
-            let playerName = prompt(`Game Over!\n你闖到了第 ${currentLevel + 1} 關！\n總共獲得了 ${score} 分！\n請輸入暱稱來記錄分數：`, "Player");
+            // 從我們在 index.html 寫的 LIFF 全域變數抓資料
+            let playerName = window.lineDisplayName || "Player";
+            let playerUid = window.lineUserId || "unknown";
+
+            // 直接用 alert 顯示戰報，不再用 prompt 問名字
+            alert(`Game Over!\n${playerName}，你闖到了第 ${currentLevel + 1} 關！\n總共獲得了 ${score} 分！\n即將為您上傳成績...`);
             
-            if (playerName) {
-                // 呼叫 GAS API 寫入排行榜資料
-                fetch("https://script.google.com/macros/s/AKfycbw1bbk0cgMJFFRhnWP2LWQJO-hmHbcDSanApXy-MfqAMOhhkzGqPVPL-1ynYlKQ9t-E/exec", {
-                    method: "POST",
-                    body: JSON.stringify({
-                        name: playerName,
-                        score: score,
-                        level: currentLevel + 1
-                    })
-                }).then(() => {
-                    location.reload(); 
-                }).catch((error) => {
-                    console.error("Error:", error);
-                    location.reload(); 
-                });
-            } else {
+            // 呼叫 GAS API 寫入排行榜資料 (包含 UID)
+            fetch("https://script.google.com/macros/s/AKfycbx5QHpqnMu-rk_ocwGdboROHFssdYJKWHRRiRUSDLYVEEQp9lY_FeczZsE-BPyMIa3s/exec", {
+                method: "POST",
+                body: JSON.stringify({
+                    uid: playerUid,        // 傳送玩家的 LINE UID
+                    name: playerName,      // 傳送玩家的 LINE 名稱
+                    score: score,
+                    level: currentLevel + 1
+                })
+            }).then(() => {
                 location.reload(); 
-            }
+            }).catch((error) => {
+                console.error("Error:", error);
+                location.reload(); 
+            });
+
         }, 1000);
     }.bind(this);
 }
