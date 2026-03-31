@@ -1,4 +1,3 @@
-
 function createPlayer() {
     // Draw player
     player = this.physics.add.sprite( /*screenWidth * 1.5*/ startOffset, screenHeight - platformHeight, 'mario').setOrigin(1).setBounce(0)
@@ -117,71 +116,29 @@ function updatePlayer(delta) {
         (playerState > 0 && (controlKeys.DOWN.isDown|| this.joyStick.down)) ? player.setVelocityY(-velocityY / 1.25) : player.setVelocityY(-velocityY);
     }
 
-    // > Horizontal movement and animations
+    // > Horizontal movement and animations (重構：強制自動跑酷模式)
     let oldVelocityX;
     let targetVelocityX;
     let newVelocityX;
 
-    if (controlKeys.LEFT.isDown || this.joyStick.left) {
-        smoothedControls.moveLeft(delta);
-        if (!playerFiring) {
-            if (playerState == 0)
-            player.anims.play('run', true).flipX = true;
+    smoothedControls.moveRight(delta);
     
-            if (playerState == 1)
-            player.anims.play('grown-mario-run', true).flipX = true;
-    
-            if (playerState == 2)
-            player.anims.play('fire-mario-run', true).flipX = true;
-        }
-
-        playerController.direction.positive = false;
-        
-        // Lerp the velocity towards the max run using the smoothed controls.
-        // This simulates a player controlled acceleration.
-        oldVelocityX = player.body.velocity.x;
-        targetVelocityX = -playerController.speed.run;
-        newVelocityX = Phaser.Math.Linear(oldVelocityX, targetVelocityX, -smoothedControls.value);
-
-        player.setVelocityX(newVelocityX);
-    } else if (controlKeys.RIGHT.isDown || this.joyStick.right) {
-        smoothedControls.moveRight(delta);
-        if (!playerFiring) {
-            if (playerState == 0)
+    if (!playerFiring) {
+        if (playerState == 0)
             player.anims.play('run', true).flipX = false;
-    
-            if (playerState == 1)
+        if (playerState == 1)
             player.anims.play('grown-mario-run', true).flipX = false;
-    
-            if (playerState == 2)
+        if (playerState == 2)
             player.anims.play('fire-mario-run', true).flipX = false;
-        }
-
-        playerController.direction.positive = true;
-
-        // Lerp the velocity towards the max run using the smoothed controls.
-        // This simulates a player controlled acceleration.
-        oldVelocityX = player.body.velocity.x;
-        targetVelocityX = playerController.speed.run;
-        newVelocityX = Phaser.Math.Linear(oldVelocityX, targetVelocityX, smoothedControls.value);
-
-        player.setVelocityX(newVelocityX);    
-    } else {
-        if (player.body.velocity.x != 0)
-            smoothedControls.reset();
-        if (player.body.touching.down)
-            player.setVelocityX(0);
-        if (!(controlKeys.JUMP.isDown|| this.joyStick.up) && !playerFiring) {
-            if (playerState == 0)
-            player.anims.play('idle', true);
-    
-            if (playerState == 1)
-            player.anims.play('grown-mario-idle', true);
-
-            if (playerState == 2)
-            player.anims.play('fire-mario-idle', true);
-        }
     }
+
+    playerController.direction.positive = true;
+
+    oldVelocityX = player.body.velocity.x;
+    targetVelocityX = playerController.speed.run;
+    newVelocityX = Phaser.Math.Linear(oldVelocityX, targetVelocityX, smoothedControls.value);
+
+    player.setVelocityX(newVelocityX);
 
     if (!playerFiring) {
         if (playerState > 0 && (controlKeys.DOWN.isDown|| this.joyStick.down)) {
