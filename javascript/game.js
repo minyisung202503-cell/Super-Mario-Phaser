@@ -270,7 +270,7 @@ function create() {
     createControls.call(this);
     applySettings.call(this);
     
-    smoothedControls = new SmoothedHorionztalControl(0.001);
+    smoothedControls = new SmoothedHorionztalControl(0.01);
 
     createHUD.call(this);
     updateTimer.call(this);
@@ -532,7 +532,7 @@ function update(delta) {
         this.gameTimeCount += delta;
 
         // 核心修正：時停防護罩 + 1000ms 的開局暖身時間
-        if (!playerBlocked && this.gameTimeCount > 1000) {
+        if (!playerBlocked && this.gameTimeCount > 2000) {
             // 防暴衝機制：鎖定 delta 最高值為 33ms (等同 30FPS)
             let safeDelta = Math.min(delta, 33);
             const scrollSpeed = (velocityX * 0.75 * safeDelta) / 1000;
