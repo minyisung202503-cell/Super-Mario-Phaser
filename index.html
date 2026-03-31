@@ -11,59 +11,32 @@
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
 
-    <!-- <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-    <script>
-        // 設定全域變數，準備裝 LINE 的資料
-        window.lineUserId = "unknown";
-        window.lineDisplayName = "Player";
-
-        async function initializeLiff() {
-            try {
-                // 初始化你的專屬 LIFF ID
-                await liff.init({ liffId: "2009659044-y6Pw50aL" }); 
-                
-                if (liff.isLoggedIn()) {
-                    // 如果已經登入，抓取玩家大名與 UID
-                    const profile = await liff.getProfile();
-                    window.lineUserId = profile.userId;
-                    window.lineDisplayName = profile.displayName;
-                    console.log("歡迎光臨，" + window.lineDisplayName);
-                } else {
-                    // 如果沒登入，強制跳轉 LINE 登入畫面
-                    liff.login();
-                }
-            } catch (err) {
-                console.error("LIFF 初始化失敗", err);
-            }
-        }
-        initializeLiff();
-    </script> -->
-
-    <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+   <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script>
         window.lineUserId = "unknown";
         window.lineDisplayName = "Player";
 
-        async function initializeLiff() {
-            try {
-                await liff.init({ liffId: "2009659044-y6Pw50aL" }); 
-                
-                if (liff.isLoggedIn()) {
-                    const profile = await liff.getProfile();
-                    window.lineUserId = profile.userId;
-                    window.lineDisplayName = profile.displayName;
+        // 核心修正：等待整個網頁 DOM 元素都載入完畢後，才啟動 LIFF
+        document.addEventListener("DOMContentLoaded", function() {
+            async function initializeLiff() {
+                try {
+                    await liff.init({ liffId: "2009659044-y6Pw50aL" }); 
                     
-                    // 暴力除錯：讓網頁一開啟就彈出你的名字，確認讀心術成功！
-                    alert("LIFF 啟動成功！抓到玩家：" + window.lineDisplayName);
-                } else {
-                    liff.login();
+                    if (liff.isLoggedIn()) {
+                        const profile = await liff.getProfile();
+                        window.lineUserId = profile.userId;
+                        window.lineDisplayName = profile.displayName;
+                        console.log("LIFF 啟動成功！玩家：" + window.lineDisplayName);
+                    } else {
+                        // 沒登入就導向登入畫面
+                        liff.login();
+                    }
+                } catch (err) {
+                    console.error("LIFF 初始化失敗", err);
                 }
-            } catch (err) {
-                alert("LIFF 啟動失敗：" + err.message);
-                console.error("LIFF 初始化失敗", err);
             }
-        }
-        initializeLiff();
+            initializeLiff();
+        });
     </script>
     
   </head>
