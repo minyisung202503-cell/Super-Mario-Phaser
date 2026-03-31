@@ -365,17 +365,8 @@ function createControls() {
       const keyCode = localStorage.getItem(keyName) ? Number(localStorage.getItem(keyName)) : defaultCodes[i];
       controlKeys[keyName] = this.input.keyboard.addKey(keyCode);
     });
-
-    /*
-    controlKeys.PAUSE.on('down', function () {
-        if (!this.settingsMenuOpen)
-            showSettings.call(this);
-        else
-            hideSettings.call(this);
-    });*/
 }
 
-// This will generate a random coordinate, that can't be within a hole
 
 function generateRandomCoordinate(entitie = false, ground = true) {
     const startPos = entitie ? screenWidth * 1.5 : screenWidth;
@@ -394,13 +385,9 @@ function generateRandomCoordinate(entitie = false, ground = true) {
     return coordinate;
   }
   
-
 // World generation
-
 function drawWorld() {
     //Drawing scenery props
-
-    //> Drawing the Sky
     this.add.rectangle(screenWidth, 0,worldWidth, screenHeight, isLevelOverworld ? 0x8585FF : 0x000000).setOrigin(0).depth = -1;
 
     let propsY = screenHeight - platformHeight;
@@ -466,12 +453,8 @@ function drawWorld() {
 
 function generateLevel() {
     //> Creating the platform
-
-    // pieceStart will be the next platform piece start pos. This value will be modified after each execution
     let pieceStart = screenWidth;
-    // This will tell us if last generated piece of platform was empty, to avoid generating another empty piece next to it.
     let lastWasHole = 0;
-    // Structures will generate every 2/3 platform pieces
     let lastWasStructure = 0;
 
     this.platformGroup = this.add.group();
@@ -483,21 +466,17 @@ function generateLevel() {
     this.groundCoinsGroup = this.add.group();
 
     if (!isLevelOverworld) {
-        //this.blocksGroup.add(this.add.tileSprite(worldWidth - screenWidth, screenHeight - (platformHeight * 4.5), screenWidth * 2.9, 16, 'block').setScale(screenHeight / 345).setOrigin(1, 0));
         this.blocksGroup.add(this.add.tileSprite(screenWidth, screenHeight - platformHeight / 1.2, 16, screenHeight - platformHeight, 'block2').setScale(screenHeight / 345).setOrigin(0, 1));
         this.undergroundRoof = this.add.tileSprite(screenWidth * 1.2, screenHeight / 13, worldWidth / 2.68, 16, 'block2').setScale(screenHeight / 345).setOrigin(0);
         this.blocksGroup.add(this.undergroundRoof);
     }
 
     for (i=0; i <= platformPieces; i++) {
-        // Holes will have a 10% chance of spawning
         let number = Phaser.Math.Between(0, 100);
 
-        // Check if its not a hole, this means is not that 20%, is not in the spawn safe area and is not close to the end castle.
         if (pieceStart >= (lastWasHole > 0 || lastWasStructure > 0 || worldWidth - platformPiecesWidth * 4) || number <= 0 || pieceStart <= screenWidth * 2 || pieceStart >= worldWidth - screenWidth * 2) {
             lastWasHole--;
 
-            //> Create platform
             let Npiece = this.add.tileSprite(pieceStart, screenHeight, platformPiecesWidth, platformHeight, 'floorbricks').setScale(2).setOrigin(0, 0.5);
             this.physics.add.existing(Npiece);
             Npiece.body.immovable = true;
@@ -505,10 +484,7 @@ function generateLevel() {
             Npiece.isPlatform = true;
             Npiece.depth = 2;
             this.platformGroup.add(Npiece);
-            // Apply player collision with platform
             this.physics.add.collider(player, Npiece);
-
-            //> Creating world structures
 
             if (!(pieceStart >= (worldWidth - screenWidth * (isLevelOverworld ? 1 : 1.5))) && pieceStart > (screenWidth + platformPiecesWidth * 2) && lastWasHole < 1 && lastWasStructure < 1) {
                 lastWasStructure = generateStructure.call(this, pieceStart);
@@ -517,10 +493,7 @@ function generateLevel() {
                 lastWasStructure--;
             }
         } else {
-            // Save every hole start and end for later use
-            worldHolesCoords.push({ start: pieceStart, 
-                end: pieceStart + platformPiecesWidth * 2});
-            
+            worldHolesCoords.push({ start: pieceStart, end: pieceStart + platformPiecesWidth * 2});
             lastWasHole = 2;
             this.fallProtectionGroup.add(this.add.rectangle(pieceStart + platformPiecesWidth * 2, screenHeight - platformHeight, 5, 5).setOrigin(0, 1));
             this.fallProtectionGroup.add(this.add.rectangle(pieceStart, screenHeight - platformHeight, 5, 5).setOrigin(1, 1));
@@ -572,7 +545,6 @@ function generateLevel() {
         fallProtections[i].body.immovable = true;
     }
 
-    // Stablish properties for every generated structure
     let misteryBlocks = this.misteryBlocksGroup.getChildren();
     for (let i = 0; i < misteryBlocks.length; i++) {
         this.physics.add.existing(misteryBlocks[i]);
@@ -583,7 +555,6 @@ function generateLevel() {
         this.physics.add.collider(player, misteryBlocks[i], revealHiddenBlock, null, this);
     }
     
-    // Apply player collision with blocks
     let blocks = this.blocksGroup.getChildren();
     for (let i = 0; i < blocks.length; i++) {
         this.physics.add.existing(blocks[i]);
@@ -593,7 +564,6 @@ function generateLevel() {
         this.physics.add.collider(player, blocks[i], destroyBlock, null, this);
     }
 
-    // Apply player collision with immovable blocks
     let constructionBlocks = this.constructionBlocksGroup.getChildren();
     for (let i = 0; i < constructionBlocks.length; i++) {
         this.physics.add.existing(constructionBlocks[i]);
@@ -604,7 +574,6 @@ function generateLevel() {
         this.physics.add.collider(player, constructionBlocks[i], destroyBlock, null, this);
     }
 
-    // Apply player collision with immovable blocks
     let immovableBlocks = this.immovableBlocksGroup.getChildren();
     for (let i = 0; i < immovableBlocks.length; i++) {
         this.physics.add.existing(immovableBlocks[i]);
@@ -626,23 +595,14 @@ function generateLevel() {
 }
 
 function startLevel(player, trigger) {
-
-    if (!player.body.blocked.right && !trigger.body.blocked.left)
-        return;
-
+    if (!player.body.blocked.right && !trigger.body.blocked.left) return;
     this.powerDownSound.play();
-
     this.physics.world.setBounds(screenWidth, 0, worldWidth, screenHeight);
-
     applyPlayerInvulnerability.call(this, 4000);
-
     playerBlocked = true;
-
     player.setVelocityX(5);
     player.anims.play('run', true).flipX = false;
-
     this.cameras.main.fadeOut(900, 0, 0, 0);
-
     this.hereWeGoSound.play();
 
     setTimeout(() => {
@@ -651,7 +611,6 @@ function startLevel(player, trigger) {
             this.musicTheme.stop();
             this.undergroundMusicTheme.play({ loop: -1 });
         }
-
         player.x = screenWidth * 1.1;
         this.cameras.main.pan(screenWidth * 1.5, 0, 0);
         playerBlocked = false;
@@ -664,28 +623,14 @@ function startLevel(player, trigger) {
     }, 1100);
 }
 
-
 function teleportToLevelEnd(player, trigger) {
-
-    if (!player.body.blocked.right && !trigger.body.blocked.left)
-        return;
-    
+    if (!player.body.blocked.right && !trigger.body.blocked.left) return;
     playerBlocked = true;
-
     this.cameras.main.stopFollow();
-
     this.powerDownSound.play();
-
-    this.tweens.add({
-        targets: player,
-        duration: 75,
-        alpha: 0
-    });
-
+    this.tweens.add({ targets: player, duration: 75, alpha: 0 });
     this.cameras.main.fadeOut(450, 0, 0, 0);
-
     player.anims.play(playerState > 0 ? playerState == 1 ? 'grown-mario-run'  : 'fire-mario-run' : 'run', true).flipX = false;
-
     this.undergroundRoof.destroy();
 
     setTimeout(() => {
@@ -707,57 +652,35 @@ function teleportToLevelEnd(player, trigger) {
         this.cameras.main.fadeIn(500, 0, 0, 0);
         this.powerDownSound.play();
         this.finalTrigger.destroy();
-        this.tweens.add({
-            targets: player,
-            duration: 500,
-            y: this.tpTube.getBounds().y
-        });
-        setTimeout(() => {
-            playerBlocked = false;
-        }, 500);
+        this.tweens.add({ targets: player, duration: 500, y: this.tpTube.getBounds().y });
+        setTimeout(() => { playerBlocked = false; }, 500);
     }, 1100);
 }
 
 function drawStartScreen() {
-    
     const screenCenterX = this.cameras.main.worldView.x + this.cameras.main.width / 2;
-
-    // Draw sky
     this.add.rectangle(0, 0, screenWidth, screenHeight, 0x8585FF).setOrigin(0).depth = -1;
 
     let platform = this.add.tileSprite(0, screenHeight, screenWidth / 2, platformHeight, 'start-floorbricks').setScale(2).setOrigin(0, 0.5);
     this.physics.add.existing(platform);
     platform.body.immovable = true;
     platform.body.allowGravity = false;
-    // Apply player collision with platform
     this.physics.add.collider(player, platform);
-
-    /*
-    this.add.text(screenWidth / 2, screenHeight - (screenHeight* 0.9), 
-    "Known bugs: \n. Mobile controls are (at least) not nice",
-    { fontFamily: 'pixel_nums', fontSize: (screenWidth / 115), align: 'left'}).setLineSpacing(screenHeight / 34.5);
-    */
    
     this.add.image(screenWidth / 50, screenHeight / 3, 'cloud1').setScale(screenHeight / 1725);
     this.add.image(screenWidth / 1.25, screenHeight / 2, 'cloud1').setScale(screenHeight / 1725);
     this.add.image(screenWidth / 1.05, screenHeight / 6.5, 'cloud2').setScale(screenHeight / 1725);
     this.add.image(screenWidth / 3, screenHeight / 3.5, 'cloud2').setScale(screenHeight / 1725);
     this.add.image(screenWidth / 2.65, screenHeight / 2.8, 'cloud2').setScale(screenHeight / 1725);
-
     this.add.image(screenWidth / 50, screenHeight / 3, 'cloud1').setScale(screenHeight / 1725);
-
     this.add.image(screenWidth / 25, screenHeight / 10, 'sign').setOrigin(0).setScale(screenHeight / 350);
 
     let propsY = screenHeight - platformHeight;
-
     this.add.image(screenWidth / 50, propsY, 'mountain2').setOrigin(0, 1).setScale(screenHeight / 517);
     this.add.image(screenWidth / 300, propsY, 'mountain1').setOrigin(0, 1).setScale(screenHeight / 517);
-
     this.add.image(screenWidth / 4, propsY, 'bush1').setOrigin(0, 1).setScale(screenHeight / 609);
     this.add.image(screenWidth / 1.55, propsY, 'bush2').setOrigin(0, 1).setScale(screenHeight / 609);
     this.add.image(screenWidth / 1.5, propsY, 'bush2').setOrigin(0, 1).setScale(screenHeight / 609);
-
-
     this.add.tileSprite(screenWidth / 15, propsY, 350, 35, 'fence').setOrigin(0, 1).setScale(screenHeight / 863);
 
     this.customBlock = this.add.sprite(screenCenterX, screenHeight - (platformHeight * 1.9),'custom-block').setScale(screenHeight / 345);
@@ -770,53 +693,34 @@ function drawStartScreen() {
     this.customBlock.body.immovable = true;
 
     this.add.image(screenCenterX, screenHeight - (platformHeight * 1.9), 'gear').setScale(screenHeight / 13000).setInteractive().on('pointerdown', () => showSettings.call(this));
-
     this.add.image(screenCenterX * 1.12, screenHeight - (platformHeight * 1.5), 'settings-bubble').setScale(screenHeight / 620);
-
     this.add.sprite(screenCenterX * 1.07, screenHeight - platformHeight, 'npc').setOrigin(0.5, 1).setScale(screenHeight / 365).anims.play('npc-default', true);
 }
 
 function raiseFlag() {
-    if (flagRaised) {
-        return false;
-    }
-
+    if (flagRaised) return false;
     this.cameras.main.stopFollow();
-
     this.timeLeftText.stopped = true;
-
     this.musicTheme.stop();
     this.undergroundMusicTheme.stop();
     this.hurryMusicTheme.stop();
     this.flagPoleSound.play();
 
-    this.tweens.add({
-        targets: this.finalFlag,
-        duration: 1000,
-        y: screenHeight / 2.2
-    });
-
-    setTimeout(() => {
-        this.winSound.play();
-    }, 1000);
-    
+    this.tweens.add({ targets: this.finalFlag, duration: 1000, y: screenHeight / 2.2 });
+    setTimeout(() => { this.winSound.play(); }, 1000);
     flagRaised = true;
     playerBlocked = true;
-
     addToScore.call(this, 2000, player);
-
     return false;
 }
 
 function consumeMushroom(player, mushroom) {
     if (gameOver || gameWinned) return;
-
     this.consumePowerUpSound.play();
     addToScore.call(this, 1000, mushroom);
     mushroom.destroy();
 
-    if (playerState > 0 )
-    return;
+    if (playerState > 0 ) return;
 
     playerBlocked = true;
     this.anims.pauseAll();
@@ -839,25 +743,20 @@ function consumeMushroom(player, mushroom) {
         playerState = 1;
         updateTimer.call(this);
     }, 1000);
-    //player.body.setSize(16, 32).setOffset(1,0);
 }
 
 function consumeFireflower(player, fireFlower) {
     if (gameOver || gameWinned) return;
-
     this.consumePowerUpSound.play();
     addToScore.call(this, 1000, fireFlower);
     fireFlower.destroy();
 
-    if (playerState > 1 )
-    return;
+    if (playerState > 1 ) return;
 
     let anim = playerState > 0 ? 'grown-mario-idle' : 'idle';
-
     playerBlocked = true;
     this.anims.pauseAll();
     this.physics.pause();
-
     player.setTint(0xfefefe).anims.play('fire-mario-idle');
     let i = 0;
     let interval = setInterval(() => {
@@ -876,7 +775,6 @@ function consumeFireflower(player, fireFlower) {
         playerState = 2;
         updateTimer.call(this);
     }, 1000);
-    //player.body.setSize(16, 32).setOffset(1,0);
 }
 
 function collectCoin(player, coin) {
@@ -893,33 +791,30 @@ function update(delta) {
     const camera = this.cameras.main;
 
     if (levelStarted && !reachedLevelEnd) {
-        // 1. 強制解除原版的被動跟隨模式
+        // 解除原版的被動跟隨模式
         if (camera.isFollowing) {
             camera.stopFollow();
             camera.isFollowing = false;
         }
 
-        // 2. 核心：強制畫面推進 (設定捲動速度為瑪利歐最高跑速的 75%)
-        // 使用 delta 確保不受裝置的螢幕更新率(FPS)影響，達成平滑移動
-        const scrollSpeed = (velocityX * 0.75 * delta) / 1000;
-        camera.scrollX += scrollSpeed;
+        // 新增防護罩：只有在瑪利歐能活動時，畫面才捲動 (時停保護)
+        if (!playerBlocked) {
+            const scrollSpeed = (velocityX * 0.75 * delta) / 1000;
+            camera.scrollX += scrollSpeed;
 
-        // 3. 左側死亡邊界：瑪利歐的最右側邊緣被畫面左緣吞噬
-        // 設定 -5 像素容錯率，讓他稍微出鏡才判定死亡
-        if (player.x < camera.scrollX - 5) {
-            gameOver = true;
-            // 直接呼叫原版架構中的全域死亡函數
-            gameOverFunc.call(this);
-            return;
+            // 左側死亡邊界
+            if (player.x < camera.scrollX - 5) {
+                gameOver = true;
+                gameOverFunc.call(this);
+                return;
+            }
+
+            // 前鋒抑制
+            if (player.x > camera.scrollX + (screenWidth * 0.6)) {
+                camera.scrollX = player.x - (screenWidth * 0.6);
+            }
         }
 
-        // 4. 前鋒抑制：防止瑪利歐跑太快衝出螢幕右側
-        // 當他來到螢幕寬度 60% 的位置時，畫面會被瑪利歐往前推
-        if (player.x > camera.scrollX + (screenWidth * 0.6)) {
-            camera.scrollX = player.x - (screenWidth * 0.6);
-        }
-
-        // 5. 確保原版的地下關卡過關判定正常運作
         if (!isLevelOverworld && player.x >= worldWidth - screenWidth * 1.5) {
             reachedLevelEnd = true;
         }
