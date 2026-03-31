@@ -35,12 +35,16 @@ var config = {
 
 const worldWidth = screenWidth * 11;
 const platformHeight = screenHeight / 5;
-
-// 將底層出生點修改至 1.2 螢幕寬度的安全區 (避開 1.5 的怪物生成區)
 const startOffset = screenWidth * 1.2; 
 
 const platformPieces = 100;
 const platformPiecesWidth = (worldWidth - screenWidth) / platformPieces;
+
+// ==========================================
+// 全域變數新增：當前關卡數與速度倍率
+// ==========================================
+var currentLevel = 0;
+var speedMultiplier = 1;
 
 var isLevelOverworld;
 var worldHolesCoords = [];
@@ -245,10 +249,31 @@ function initSounds() {
 }
 
 function create() {
+    // 讀取上一關的記憶體
+    if (localStorage.getItem('mario_score')) { score = parseInt(localStorage.getItem('mario_score')); } 
+    else { score = 0; }
+
+    if (localStorage.getItem('mario_state')) { playerState = parseInt(localStorage.getItem('mario_state')); } 
+    else { playerState = 0; }
+
+    // ==========================================
+    // 核心重構：動態難度系統 (讀取關卡並計算倍率)
+    // ==========================================
+    if (localStorage.getItem('mario_level')) {
+        currentLevel = parseInt(localStorage.getItem('mario_level'));
+    } else {
+        currentLevel = 0;
+    }
+    
+    // 每過一關，整體速度增加 10% (例如第3關就是 1.3 倍速)
+    speedMultiplier = 1 + (currentLevel * 0.1);
+    console.log(`目前關卡: ${currentLevel + 1}, 速度倍率: ${speedMultiplier}x`);
+
     playerController = {
         time: { leftDown: 0, rightDown: 0 },
         direction: { positive: true },
-        speed: { run: velocityX }
+        // 瑪利歐的跑速套用倍率
+        speed: { run: velocityX * speedMultiplier }
     };
 
     this.physics.world.setBounds(screenWidth, 0, worldWidth, screenHeight);
@@ -260,7 +285,6 @@ function create() {
     createAnimations.call(this);
     createPlayer.call(this);
 
-    // 強制出生在安全距離，並從半空中掉落以確保物理碰撞生效
     player.x = screenWidth * 1.2;
     player.y = screenHeight / 3;
 
@@ -270,12 +294,12 @@ function create() {
     createControls.call(this);
     applySettings.call(this);
     
-    smoothedControls = new SmoothedHorionztalControl(0.1);
+    // 加速度平滑參數調高，確保瞬間起步
+    smoothedControls = new SmoothedHorionztalControl(0.01);
 
     createHUD.call(this);
     updateTimer.call(this);
     
-    // 初始化開局計時器
     this.gameTimeCount = 0; 
     levelStarted = true;
     playerBlocked = false;
@@ -287,7 +311,16 @@ function create() {
         this.undergroundMusicTheme.play({ loop: -1 });
     }
 
-    // 死亡結算：加入防多重觸發機制 (防止無限 loop)
+    // 過關時：寫入關卡數 (+1)，保留分數與狀態
+    window.winScreen = function() {
+        localStorage.setItem('mario_score', score);
+        localStorage.setItem('mario_state', playerState);
+        localStorage.setItem('mario_level', currentLevel + 1); // 難度提升
+        
+        location.reload();
+    }.bind(this);
+
+    // 死亡時：徹底銷毀所有記憶卡，打回原形
     window.gameOverFunc = function() {
         if (gameWinned || this.isGameOverTriggered) return;
         this.isGameOverTriggered = true; 
@@ -301,8 +334,13 @@ function create() {
         this.anims.pauseAll();
         player.setTint(0xff0000); 
 
+        // 清除記憶，下一局從 Level 0 開始
+        localStorage.removeItem('mario_score');
+        localStorage.removeItem('mario_state');
+        localStorage.removeItem('mario_level');
+
         setTimeout(() => {
-            let playerName = prompt("Game Over!\n你獲得了 " + score + " 分！\n請輸入你的暱稱來記錄分數：", "Player");
+            let playerName = prompt(`Game Over!\n你闖到了第 ${currentLevel + 1} 關！\n總共獲得了 ${score} 分！\n請輸入暱稱來記錄分數：`, "Player");
             if (playerName) {
                 alert("準備將 [" + playerName + "] 的分數 [" + score + "] 傳送給後端 GAS 排行榜！");
             }
@@ -421,10 +459,6 @@ function generateLevel() {
         pieceStart += platformPiecesWidth * 2;
     }
 
-    // ==============================================
-    // 以下是上次不小心刪掉的物理碰撞掛載邏輯，全數補回！
-    // ==============================================
-
     let fallProtections = this.fallProtectionGroup.getChildren();
     for (let i = 0; i < fallProtections.length; i++) {
         this.physics.add.existing(fallProtections[i]);
@@ -481,8 +515,8 @@ function generateLevel() {
     }
 }
 
-function startLevel() {} // 已經廢棄，留空以防報錯
-function teleportToLevelEnd() {} // 已經廢棄，留空以防報錯
+function startLevel() {} 
+function teleportToLevelEnd() {} 
 function drawStartScreen() { }
 
 function raiseFlag() {
@@ -584,24 +618,21 @@ function update(delta) {
             camera.isFollowing = false;
         }
 
-        // 計時器累加
         this.gameTimeCount += delta;
 
-        // 核心修正：時停防護罩 + 1000ms 的開局暖身時間
         if (!playerBlocked && this.gameTimeCount > 2000) {
-            // 防暴衝機制：鎖定 delta 最高值為 33ms (等同 30FPS)
             let safeDelta = Math.min(delta, 33);
-            const scrollSpeed = (velocityX * 0.45 * safeDelta) / 1000;
+            
+            // 攝影機捲動速度也套用倍率，永遠保持 45% 的追隨比例
+            const scrollSpeed = (velocityX * speedMultiplier * 0.45 * safeDelta) / 1000;
             camera.scrollX += scrollSpeed;
 
-            // 左側死亡邊界放寬容錯率 (15 pixel)
             if (player.x < camera.scrollX - 15) {
                 gameOver = true;
                 gameOverFunc.call(this);
                 return;
             }
 
-            // 前鋒抑制
             if (player.x > camera.scrollX + (screenWidth * 0.6)) {
                 camera.scrollX = player.x - (screenWidth * 0.6);
             }
