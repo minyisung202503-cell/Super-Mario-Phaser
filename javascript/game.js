@@ -421,8 +421,64 @@ function generateLevel() {
         pieceStart += platformPiecesWidth * 2;
     }
 
-    // 拔除原本會擋住路徑的隱形牆與傳送點
-    // this.startScreenTrigger = ... 
+    // ==============================================
+    // 以下是上次不小心刪掉的物理碰撞掛載邏輯，全數補回！
+    // ==============================================
+
+    let fallProtections = this.fallProtectionGroup.getChildren();
+    for (let i = 0; i < fallProtections.length; i++) {
+        this.physics.add.existing(fallProtections[i]);
+        fallProtections[i].body.allowGravity = false;
+        fallProtections[i].body.immovable = true;
+    }
+
+    let misteryBlocks = this.misteryBlocksGroup.getChildren();
+    for (let i = 0; i < misteryBlocks.length; i++) {
+        this.physics.add.existing(misteryBlocks[i]);
+        misteryBlocks[i].body.allowGravity = false;
+        misteryBlocks[i].body.immovable = true;
+        misteryBlocks[i].depth = 2;
+        misteryBlocks[i].anims.play('mistery-block-default', true);
+        this.physics.add.collider(player, misteryBlocks[i], revealHiddenBlock, null, this);
+    }
+    
+    let blocks = this.blocksGroup.getChildren();
+    for (let i = 0; i < blocks.length; i++) {
+        this.physics.add.existing(blocks[i]);
+        blocks[i].body.allowGravity = false;
+        blocks[i].body.immovable = true;
+        blocks[i].depth = 2;
+        this.physics.add.collider(player, blocks[i], destroyBlock, null, this);
+    }
+
+    let constructionBlocks = this.constructionBlocksGroup.getChildren();
+    for (let i = 0; i < constructionBlocks.length; i++) {
+        this.physics.add.existing(constructionBlocks[i]);
+        constructionBlocks[i].isImmovable = true;
+        constructionBlocks[i].body.allowGravity = false;
+        constructionBlocks[i].body.immovable = true;
+        constructionBlocks[i].depth = 2;
+        this.physics.add.collider(player, constructionBlocks[i], destroyBlock, null, this);
+    }
+
+    let immovableBlocks = this.immovableBlocksGroup.getChildren();
+    for (let i = 0; i < immovableBlocks.length; i++) {
+        this.physics.add.existing(immovableBlocks[i]);
+        immovableBlocks[i].body.allowGravity = false;
+        immovableBlocks[i].body.immovable = true;
+        immovableBlocks[i].depth = 2;
+        this.physics.add.collider(player, immovableBlocks[i]);
+    }
+
+    let groundCoins = this.groundCoinsGroup.getChildren();
+    for (let i = 0; i < groundCoins.length; i++) {
+        this.physics.add.existing(groundCoins[i]);
+        groundCoins[i].anims.play('ground-coin-default', true);
+        groundCoins[i].body.allowGravity = false;
+        groundCoins[i].body.immovable = true;
+        groundCoins[i].depth = 2;
+        this.physics.add.overlap(player, groundCoins[i], collectCoin, null, this);
+    }
 }
 
 function startLevel() {} // 已經廢棄，留空以防報錯
