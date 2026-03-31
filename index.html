@@ -10,6 +10,35 @@
     <link rel="stylesheet" href="assets/css/style.css" />
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+
+    <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <script>
+        // 設定全域變數，準備裝 LINE 的資料
+        window.lineUserId = "unknown";
+        window.lineDisplayName = "Player";
+
+        async function initializeLiff() {
+            try {
+                // 初始化你的專屬 LIFF ID
+                await liff.init({ liffId: "2009659044-y6Pw50aL" }); 
+                
+                if (liff.isLoggedIn()) {
+                    // 如果已經登入，抓取玩家大名與 UID
+                    const profile = await liff.getProfile();
+                    window.lineUserId = profile.userId;
+                    window.lineDisplayName = profile.displayName;
+                    console.log("歡迎光臨，" + window.lineDisplayName);
+                } else {
+                    // 如果沒登入，強制跳轉 LINE 登入畫面
+                    liff.login();
+                }
+            } catch (err) {
+                console.error("LIFF 初始化失敗", err);
+            }
+        }
+        initializeLiff();
+    </script>
+    
   </head>
   <body>
     <div id="game">
