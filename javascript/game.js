@@ -535,7 +535,7 @@ function update(delta) {
         if (!playerBlocked && this.gameTimeCount > 2000) {
             // 防暴衝機制：鎖定 delta 最高值為 33ms (等同 30FPS)
             let safeDelta = Math.min(delta, 33);
-            const scrollSpeed = (velocityX * 0.75 * safeDelta) / 1000;
+            const scrollSpeed = (velocityX * 0.45 * safeDelta) / 1000;
             camera.scrollX += scrollSpeed;
 
             // 左側死亡邊界放寬容錯率 (15 pixel)
