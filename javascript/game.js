@@ -609,6 +609,10 @@ function update(delta) {
     if (gameOver || gameWinned) return;
 
     updatePlayer.call(this, delta);
+    // 新增：火之花全自動連發機制
+    if (playerState === 2 && !fireInCooldown && !playerBlocked) {
+        throwFireball.call(this);
+    }
 
     const camera = this.cameras.main;
 
