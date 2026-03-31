@@ -890,25 +890,38 @@ function update(delta) {
 
     updatePlayer.call(this, delta);
 
-    const playerVelocityX = player.body.velocity.x;
     const camera = this.cameras.main;
 
-    if (playerVelocityX > 0 && levelStarted && !reachedLevelEnd && !camera.isFollowing &&
-        player.x >= screenWidth * 1.5 && player.x >= (camera.worldView.x + camera.width / 2)) {
-        camera.startFollow(player, true, 0.1, 0.05);
-        camera.isFollowing = true;
-    }
+    if (levelStarted && !reachedLevelEnd) {
+        // 1. 強制解除原版的被動跟隨模式
+        if (camera.isFollowing) {
+            camera.stopFollow();
+            camera.isFollowing = false;
+        }
 
-    if (playerVelocityX < 0 && furthestPlayerPos < player.x && levelStarted && !reachedLevelEnd && camera.isFollowing) {
-        furthestPlayerPos = player.x;
-        const worldBounds = this.physics.world.setBounds(camera.worldView.x, 0, worldWidth, screenHeight);
-        camera.setBounds(camera.worldView.x, 0, worldWidth, screenHeight);
-        camera.stopFollow();
-        camera.isFollowing = false;
-    }
+        // 2. 核心：強制畫面推進 (設定捲動速度為瑪利歐最高跑速的 75%)
+        // 使用 delta 確保不受裝置的螢幕更新率(FPS)影響，達成平滑移動
+        const scrollSpeed = (velocityX * 0.75 * delta) / 1000;
+        camera.scrollX += scrollSpeed;
 
-    if (!reachedLevelEnd && !isLevelOverworld && camera.isFollowing && player.x >= worldWidth - screenWidth * 1.5) {
-        reachedLevelEnd = true;
-        camera.stopFollow();
+        // 3. 左側死亡邊界：瑪利歐的最右側邊緣被畫面左緣吞噬
+        // 設定 -5 像素容錯率，讓他稍微出鏡才判定死亡
+        if (player.x < camera.scrollX - 5) {
+            gameOver = true;
+            // 直接呼叫原版架構中的全域死亡函數
+            gameOverFunc.call(this);
+            return;
+        }
+
+        // 4. 前鋒抑制：防止瑪利歐跑太快衝出螢幕右側
+        // 當他來到螢幕寬度 60% 的位置時，畫面會被瑪利歐往前推
+        if (player.x > camera.scrollX + (screenWidth * 0.6)) {
+            camera.scrollX = player.x - (screenWidth * 0.6);
+        }
+
+        // 5. 確保原版的地下關卡過關判定正常運作
+        if (!isLevelOverworld && player.x >= worldWidth - screenWidth * 1.5) {
+            reachedLevelEnd = true;
+        }
     }
 }
