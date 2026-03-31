@@ -341,10 +341,25 @@ function create() {
 
         setTimeout(() => {
             let playerName = prompt(`Game Over!\n你闖到了第 ${currentLevel + 1} 關！\n總共獲得了 ${score} 分！\n請輸入暱稱來記錄分數：`, "Player");
+            
             if (playerName) {
-                alert("準備將 [" + playerName + "] 的分數 [" + score + "] 傳送給後端 GAS 排行榜！");
+                // 呼叫 GAS API 寫入排行榜資料
+                fetch("https://script.google.com/macros/s/AKfycbw1bbk0cgMJFFRhnWP2LWQJO-hmHbcDSanApXy-MfqAMOhhkzGqPVPL-1ynYlKQ9t-E/exec", {
+                    method: "POST",
+                    body: JSON.stringify({
+                        name: playerName,
+                        score: score,
+                        level: currentLevel + 1
+                    })
+                }).then(() => {
+                    location.reload(); 
+                }).catch((error) => {
+                    console.error("Error:", error);
+                    location.reload(); 
+                });
+            } else {
+                location.reload(); 
             }
-            location.reload(); 
         }, 1000);
     }.bind(this);
 }
