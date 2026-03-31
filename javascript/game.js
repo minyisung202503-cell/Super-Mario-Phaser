@@ -67,7 +67,6 @@ var controlKeys = {
     RIGHT: null,
     FIRE: null,
     PAUSE: null
-
 };
 
 var score = 0;
@@ -86,12 +85,8 @@ function isMobileDevice() {
     return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 }
 
-// Source: https://github.com/photonstorm/phaser3-examples/blob/master/public/src/tilemap/collision/matter%20destroy%20tile%20bodies.js#L35
-
 var SmoothedHorionztalControl = new Phaser.Class({
-
     initialize:
-
     function SmoothedHorionztalControl(speed) {
             this.msSpeed = speed;
             this.value = 0;
@@ -117,7 +112,6 @@ var SmoothedHorionztalControl = new Phaser.Class({
 });
 
 function preload() {
-
     var progressBox = this.add.graphics();
     var progressBar = this.add.graphics();
     progressBox.fillStyle(0x222222, 1);
@@ -161,7 +155,6 @@ function preload() {
     this.load.plugin('rexkawaseblurpipelineplugin', 'https://raw.githubusercontent.com/rexrainbow/phaser3-rex-notes/master/dist/rexkawaseblurpipelineplugin.min.js', true);
 
     isLevelOverworld = Phaser.Math.Between(0, 100) <= 84;
-
     let levelStyle = isLevelOverworld ? 'overworld' : 'underground';
 
     // Load entities sprites
@@ -196,12 +189,10 @@ function preload() {
     this.load.image('vertical-small-tube', 'assets/scenery/vertical-small-tube.png');
     this.load.image('vertical-medium-tube', 'assets/scenery/vertical-medium-tube.png');
     this.load.image('vertical-large-tube', 'assets/scenery/vertical-large-tube.png');
-
     
     // Load HUD images
     this.load.image('gear', 'assets/hud/gear.png');
     this.load.image('settings-bubble', 'assets/hud/settings-bubble.png');
-
     this.load.spritesheet('npc', 'assets/hud/npc.png', { frameWidth: 16, frameHeight: 24 });
 
     // Load platform bricks and structures
@@ -221,7 +212,6 @@ function preload() {
     this.load.spritesheet('fire-flower', 'assets/collectibles/' + levelStyle + '/fire-flower.png', { frameWidth: 16, frameHeight: 16 });
     this.load.image('live-mushroom', 'assets/collectibles/live-mushroom.png');
     this.load.image('super-mushroom', 'assets/collectibles/super-mushroom.png');
-
 
     // Load sounds and music
     this.load.audio('music', 'assets/sound/music/overworld/theme.mp3');
@@ -308,6 +298,9 @@ function initSounds() {
     this.effectsGroup.add(this.breakBlockSound);
 }
 
+// ==========================================
+// 重構：強制跳過開始畫面，直接啟動跑酷模式
+// ==========================================
 function create() {
     playerController = {
         time: { leftDown: 0, rightDown: 0 },
@@ -343,6 +336,9 @@ function create() {
     smoothedControls = new SmoothedHorionztalControl(0.001);
 
     // 5. 強制觸發關卡開始狀態，解鎖攝影機與瑪利歐
+    createHUD.call(this);       // 補上儀表板 UI
+    updateTimer.call(this);     // 補上倒數計時器
+    
     levelStarted = true;
     playerBlocked = false;
     
@@ -357,19 +353,13 @@ function create() {
 }
 
 function createControls() {
-
     this.joyStick = this.plugins.get('rexvirtualjoystickplugin').add(this, {
         x: screenWidth * 0.118,
         y: screenHeight / 1.68,
         radius: mobileDevice ? 100 : 0,
         base: this.add.circle(0, 0, mobileDevice ? 75 : 0, 0x0000000, 0.05),
         thumb: this.add.circle(0, 0, mobileDevice ? 25 : 0, 0xcccccc, 0.2),
-        // dir: '8dir',   // 'up&down'|0|'left&right'|1|'4dir'|2|'8dir'|3
-        // forceMin: 16,
-        // enable: true
     });
-
-    // Set control keys
 
     const keyNames = ['JUMP', 'DOWN', 'LEFT', 'RIGHT', 'FIRE', 'PAUSE'];
     const defaultCodes = [Phaser.Input.Keyboard.KeyCodes.SPACE, Phaser.Input.Keyboard.KeyCodes.S, Phaser.Input.Keyboard.KeyCodes.A, Phaser.Input.Keyboard.KeyCodes.D, Phaser.Input.Keyboard.KeyCodes.Q, Phaser.Input.Keyboard.KeyCodes.ESC];
@@ -400,13 +390,11 @@ function generateRandomCoordinate(entitie = false, ground = true) {
   
 // World generation
 function drawWorld() {
-    //Drawing scenery props
     this.add.rectangle(screenWidth, 0,worldWidth, screenHeight, isLevelOverworld ? 0x8585FF : 0x000000).setOrigin(0).depth = -1;
 
     let propsY = screenHeight - platformHeight;
 
     if (isLevelOverworld) {
-        //> Clouds
         for (i = 0; i < Phaser.Math.Between(Math.trunc(worldWidth / 760), Math.trunc(worldWidth / 380)); i++) {
             let x = generateRandomCoordinate(false, false);
             let y = Phaser.Math.Between(screenHeight / 80, screenHeight / 2.2);
@@ -417,7 +405,6 @@ function drawWorld() {
             }
         }
 
-        //> Mountains
         for (i = 0; i < Phaser.Math.Between(worldWidth / 6400, worldWidth / 3800); i++) {
             let x = generateRandomCoordinate();
 
@@ -428,7 +415,6 @@ function drawWorld() {
             }
         }
         
-        //> Bushes
         for (i = 0; i < Phaser.Math.Between(Math.trunc(worldWidth / 960), Math.trunc(worldWidth / 760)); i++) {
             let x = generateRandomCoordinate();
 
@@ -439,7 +425,6 @@ function drawWorld() {
             }
         }
 
-        //> Fences
         for (i = 0; i < Phaser.Math.Between(Math.trunc(worldWidth / 4000), Math.trunc(worldWidth / 2000)); i++) {
             let x = generateRandomCoordinate();
 
@@ -447,7 +432,6 @@ function drawWorld() {
         }
     }
 
-    //> Final flag
     this.finalFlagMast = this.add.tileSprite(worldWidth - (worldWidth / 30), propsY, 16, 167, 'flag-mast').setOrigin(0, 1).setScale(screenHeight / 400);
     this.physics.add.existing(this.finalFlagMast);
     this.finalFlagMast.immovable = true;
@@ -456,16 +440,13 @@ function drawWorld() {
     this.physics.add.overlap(player, this.finalFlagMast, null, raiseFlag, this);
     this.physics.add.collider(this.platformGroup.getChildren(), this.finalFlagMast);
 
-    //> Flag
     this.finalFlag = this.add.image(worldWidth - (worldWidth / 30), propsY * 0.93, 'final-flag').setOrigin(0.5, 1);
     this.finalFlag.setScale(screenHeight / 400);
 
-    //> Castle
     this.add.image(worldWidth - (worldWidth / 75), propsY, 'castle').setOrigin(0.5, 1).setScale(screenHeight / 300);
 }
 
 function generateLevel() {
-    //> Creating the platform
     let pieceStart = screenWidth;
     let lastWasHole = 0;
     let lastWasStructure = 0;
@@ -670,45 +651,8 @@ function teleportToLevelEnd(player, trigger) {
     }, 1100);
 }
 
-function drawStartScreen() {
-    const screenCenterX = this.cameras.main.worldView.x + this.cameras.main.width / 2;
-    this.add.rectangle(0, 0, screenWidth, screenHeight, 0x8585FF).setOrigin(0).depth = -1;
-
-    let platform = this.add.tileSprite(0, screenHeight, screenWidth / 2, platformHeight, 'start-floorbricks').setScale(2).setOrigin(0, 0.5);
-    this.physics.add.existing(platform);
-    platform.body.immovable = true;
-    platform.body.allowGravity = false;
-    this.physics.add.collider(player, platform);
-   
-    this.add.image(screenWidth / 50, screenHeight / 3, 'cloud1').setScale(screenHeight / 1725);
-    this.add.image(screenWidth / 1.25, screenHeight / 2, 'cloud1').setScale(screenHeight / 1725);
-    this.add.image(screenWidth / 1.05, screenHeight / 6.5, 'cloud2').setScale(screenHeight / 1725);
-    this.add.image(screenWidth / 3, screenHeight / 3.5, 'cloud2').setScale(screenHeight / 1725);
-    this.add.image(screenWidth / 2.65, screenHeight / 2.8, 'cloud2').setScale(screenHeight / 1725);
-    this.add.image(screenWidth / 50, screenHeight / 3, 'cloud1').setScale(screenHeight / 1725);
-    this.add.image(screenWidth / 25, screenHeight / 10, 'sign').setOrigin(0).setScale(screenHeight / 350);
-
-    let propsY = screenHeight - platformHeight;
-    this.add.image(screenWidth / 50, propsY, 'mountain2').setOrigin(0, 1).setScale(screenHeight / 517);
-    this.add.image(screenWidth / 300, propsY, 'mountain1').setOrigin(0, 1).setScale(screenHeight / 517);
-    this.add.image(screenWidth / 4, propsY, 'bush1').setOrigin(0, 1).setScale(screenHeight / 609);
-    this.add.image(screenWidth / 1.55, propsY, 'bush2').setOrigin(0, 1).setScale(screenHeight / 609);
-    this.add.image(screenWidth / 1.5, propsY, 'bush2').setOrigin(0, 1).setScale(screenHeight / 609);
-    this.add.tileSprite(screenWidth / 15, propsY, 350, 35, 'fence').setOrigin(0, 1).setScale(screenHeight / 863);
-
-    this.customBlock = this.add.sprite(screenCenterX, screenHeight - (platformHeight * 1.9),'custom-block').setScale(screenHeight / 345);
-    this.customBlock.anims.play('custom-block-default')
-    this.physics.add.collider(player, this.customBlock, function() {
-        if (player.body.blocked.up) showSettings.call(this);
-    }, null, this);
-    this.physics.add.existing(this.customBlock);
-    this.customBlock.body.allowGravity = false;
-    this.customBlock.body.immovable = true;
-
-    this.add.image(screenCenterX, screenHeight - (platformHeight * 1.9), 'gear').setScale(screenHeight / 13000).setInteractive().on('pointerdown', () => showSettings.call(this));
-    this.add.image(screenCenterX * 1.12, screenHeight - (platformHeight * 1.5), 'settings-bubble').setScale(screenHeight / 620);
-    this.add.sprite(screenCenterX * 1.07, screenHeight - platformHeight, 'npc').setOrigin(0.5, 1).setScale(screenHeight / 365).anims.play('npc-default', true);
-}
+// 已經不用的展示間，但保留函式宣告以免其他地方報錯
+function drawStartScreen() { }
 
 function raiseFlag() {
     if (flagRaised) return false;
@@ -796,6 +740,9 @@ function collectCoin(player, coin) {
     coin.destroy();
 }
 
+// ==========================================
+// 重構：強制畫面推進與左側死亡邊界
+// ==========================================
 function update(delta) {
     if (gameOver || gameWinned) return;
 
@@ -804,25 +751,21 @@ function update(delta) {
     const camera = this.cameras.main;
 
     if (levelStarted && !reachedLevelEnd) {
-        // 解除原版的被動跟隨模式
         if (camera.isFollowing) {
             camera.stopFollow();
             camera.isFollowing = false;
         }
 
-        // 新增防護罩：只有在瑪利歐能活動時，畫面才捲動 (時停保護)
         if (!playerBlocked) {
             const scrollSpeed = (velocityX * 0.75 * delta) / 1000;
             camera.scrollX += scrollSpeed;
 
-            // 左側死亡邊界
             if (player.x < camera.scrollX - 5) {
                 gameOver = true;
                 gameOverFunc.call(this);
                 return;
             }
 
-            // 前鋒抑制
             if (player.x > camera.scrollX + (screenWidth * 0.6)) {
                 camera.scrollX = player.x - (screenWidth * 0.6);
             }
