@@ -270,7 +270,7 @@ function create() {
     createControls.call(this);
     applySettings.call(this);
     
-    smoothedControls = new SmoothedHorionztalControl(0.01);
+    smoothedControls = new SmoothedHorionztalControl(0.1);
 
     createHUD.call(this);
     updateTimer.call(this);
