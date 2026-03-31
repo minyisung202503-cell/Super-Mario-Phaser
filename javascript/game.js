@@ -266,7 +266,8 @@ function create() {
     }
     
     // 每過一關，整體速度增加 10% (例如第3關就是 1.3 倍速)
-    speedMultiplier = 1 + (currentLevel * 0.1);
+    //speedMultiplier = 1 + (currentLevel * 0.1);
+    speedMultiplier = currentLevel ;
     console.log(`目前關卡: ${currentLevel + 1}, 速度倍率: ${speedMultiplier}x`);
 
     playerController = {
