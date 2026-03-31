@@ -310,37 +310,50 @@ function initSounds() {
 
 function create() {
     playerController = {
-        time: {
-            leftDown: 0,
-            rightDown: 0
-        },
-        direction: {
-            positive: true
-        },
-        speed: {
-            run: velocityX,
-        }
+        time: { leftDown: 0, rightDown: 0 },
+        direction: { positive: true },
+        speed: { run: velocityX }
     };
 
-    this.physics.world.setBounds(0, 0, worldWidth, screenHeight);
+    // 1. 縮小世界邊界，直接從真正的關卡起點開始
+    this.physics.world.setBounds(screenWidth, 0, worldWidth, screenHeight);
 
-    // Create camera
-    this.cameras.main.setBounds(0, 0, worldWidth, screenHeight);
+    // 2. 攝影機直接對準起點，不從 0 開始
+    this.cameras.main.setBounds(screenWidth, 0, worldWidth, screenHeight);
     this.cameras.main.isFollowing = false;
-    //this.cameras.main.followOffset.set(startOffset / 6, 0);
+    this.cameras.main.scrollX = screenWidth; 
 
     initSounds.call(this);
-
     createAnimations.call(this);
     createPlayer.call(this);
+
+    // 3. 將瑪利歐直接傳送到真正的起跑線 (跳過展示間)
+    player.x = screenWidth * 1.1;
+
     generateLevel.call(this);
     drawWorld.call(this);
-    drawStartScreen.call(this);
+    
+    // 4. 徹底刪除展示間 (註解掉 drawStartScreen)
+    // drawStartScreen.call(this); 
+
     createGoombas.call(this);
     createControls.call(this);
     applySettings.call(this);
     
     smoothedControls = new SmoothedHorionztalControl(0.001);
+
+    // 5. 強制觸發關卡開始狀態，解鎖攝影機與瑪利歐
+    levelStarted = true;
+    playerBlocked = false;
+    
+    // 播放經典的 Here We Go 語音
+    this.hereWeGoSound.play(); 
+
+    // 修正地下關卡的音樂邏輯
+    if (!isLevelOverworld) {
+        this.musicTheme.stop();
+        this.undergroundMusicTheme.play({ loop: -1 });
+    }
 }
 
 function createControls() {
