@@ -106,14 +106,25 @@ function updatePlayer(delta) {
     if (playerBlocked)
         return;
 
-    // Player controls
-    // https://github.com/photonstorm/phaser3-examples/blob/master/public/src/tilemap/collision/matter%20destroy%20tile%20bodies.js#L323
-    // https://codepen.io/rexrainbow/pen/oyqvQY
+    // > Vertical movement (重構：全螢幕觸控與二段跳)
+    if (this.jumpCount === undefined) this.jumpCount = 0;
+    if (this.jumpInputWasDown === undefined) this.jumpInputWasDown = false;
 
-    // > Vertical movement
-    if ((controlKeys.JUMP.isDown || this.joyStick.up) && player.body.touching.down) {
+    let isPointerDown = this.input.activePointer.isDown;
+    let isKeyDown = controlKeys.JUMP.isDown; 
+    let isAnyJumpInputDown = isPointerDown || isKeyDown;
+
+    let isJumpPressed = isAnyJumpInputDown && !this.jumpInputWasDown;
+    this.jumpInputWasDown = isAnyJumpInputDown;
+
+    if (player.body.touching.down) {
+        this.jumpCount = 0;
+    }
+
+    if (isJumpPressed && this.jumpCount < 2) {
         this.jumpSound.play();
-        (playerState > 0 && (controlKeys.DOWN.isDown|| this.joyStick.down)) ? player.setVelocityY(-velocityY / 1.25) : player.setVelocityY(-velocityY);
+        player.setVelocityY(-velocityY); 
+        this.jumpCount++;
     }
 
     // > Horizontal movement and animations (重構：強制自動跑酷模式)
@@ -141,17 +152,14 @@ function updatePlayer(delta) {
     player.setVelocityX(newVelocityX);
 
     if (!playerFiring) {
-        if (playerState > 0 && (controlKeys.DOWN.isDown|| this.joyStick.down)) {
+        if (playerState > 0 && controlKeys.DOWN.isDown) {
             if (playerState == 1)
             player.anims.play('grown-mario-crouch', true);
 
             if (playerState == 2)
             player.anims.play('fire-mario-crouch', true);
 
-            if (player.body.touching.down) {
-                player.setVelocityX(0);
-            } 
-
+            // 移除原本的下蹲煞車邏輯，保持跑酷動能
             player.body.setSize(14, 22).setOffset(2, 10);
 
             return;
