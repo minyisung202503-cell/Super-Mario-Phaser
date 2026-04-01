@@ -673,3 +673,138 @@ function update(delta) {
         }
     }
 }
+
+function createGoombas() {
+    // 1. 註冊烏龜與龜殼的專屬動畫 (確保只註冊一次)
+    if (!this.anims.exists('koopa-walk')) {
+        this.anims.create({ key: 'koopa-walk', frames: this.anims.generateFrameNumbers('koopa', { start: 0, end: 1 }), frameRate: 5, repeat: -1 });
+        this.anims.create({ key: 'shell-idle', frames: [{ key: 'shell', frame: 0 }], frameRate: 10 });
+    }
+
+    this.goombasGroup = this.add.group();
+    this.koopasGroup = this.add.group(); // 新增烏龜群組
+
+    // 2. 混合生成池 (70% 蘑菇怪, 30% 烏龜)
+    for (let i = 0; i < worldWidth / 400; i++) {
+        let x = generateRandomCoordinate(true);
+        let y = screenHeight - platformHeight - 20;
+
+        if (Phaser.Math.Between(0, 100) > 30) {
+            // 生成蘑菇怪
+            let goomba = this.physics.add.sprite(x, y, 'goomba').setScale(screenHeight / 400);
+            goomba.anims.play('goomba-idle', true);
+            this.physics.add.existing(goomba);
+            goomba.body.bounce.y = 0;
+            goomba.body.collideWorldBounds = false;
+            goomba.type = 'goomba';
+            this.goombasGroup.add(goomba);
+        } else {
+            // 生成烏龜
+            let koopa = this.physics.add.sprite(x, y, 'koopa').setScale(screenHeight / 400);
+            koopa.anims.play('koopa-walk', true);
+            this.physics.add.existing(koopa);
+            koopa.body.bounce.y = 0;
+            koopa.body.collideWorldBounds = false;
+            
+            // 烏龜專屬狀態機
+            koopa.type = 'koopa';
+            koopa.isShell = false;
+            koopa.isSliding = false;
+            this.koopasGroup.add(koopa);
+        }
+    }
+
+    // 3. 掛載環境物理碰撞
+    let platforms = [this.platformGroup, this.fallProtectionGroup, this.blocksGroup, this.immovableBlocksGroup];
+    platforms.forEach(group => {
+        this.physics.add.collider(this.goombasGroup, group);
+        this.physics.add.collider(this.koopasGroup, group);
+    });
+
+    // 4. 掛載核心戰鬥碰撞
+    this.physics.add.overlap(player, this.goombasGroup, hitEnemy, null, this);
+    this.physics.add.overlap(player, this.koopasGroup, hitEnemy, null, this);
+    
+    // 龜殼保齡球機制：滑行的烏龜可以撞死其他怪物
+    this.physics.add.overlap(this.koopasGroup, this.goombasGroup, shellHitEnemy, null, this);
+    this.physics.add.overlap(this.koopasGroup, this.koopasGroup, shellHitEnemy, null, this);
+}
+
+// === 全新戰鬥邏輯控制器 ===
+function hitEnemy(player, enemy) {
+    if (gameOver || gameWinned || enemy.dead) return;
+
+    // 判定：玩家從上方踩踏 (玩家正在落下 且 怪物在玩家腳下)
+    if (player.body.velocity.y > 0 && player.body.bottom < enemy.body.bottom) {
+        player.setVelocityY(-levelGravity / 2.5); // 踩踏後的微反彈
+
+        if (enemy.type === 'goomba') {
+            // 踩死蘑菇怪
+            this.goombaStompSound.play();
+            enemy.dead = true;
+            enemy.anims.play('goomba-idle', true).flipY = true;
+            enemy.setVelocityX(0);
+            enemy.body.checkCollision.none = true;
+            addToScore.call(this, 100, enemy);
+            setTimeout(() => { enemy.destroy(); }, 1000);
+        } 
+        else if (enemy.type === 'koopa') {
+            if (!enemy.isShell) {
+                // 第一踩：變成靜止龜殼
+                this.goombaStompSound.play();
+                enemy.isShell = true;
+                enemy.isSliding = false;
+                enemy.anims.play('shell-idle', true);
+                enemy.body.setSize(16, 15); // 縮小碰撞箱
+                enemy.setVelocityX(0);
+                addToScore.call(this, 100, enemy);
+            } else if (enemy.isShell && !enemy.isSliding) {
+                // 第二踩：將靜止龜殼踢出
+                this.kickSound.play();
+                enemy.isSliding = true;
+                // 根據玩家位置決定踢飛方向 (速度為當前極速的 2 倍)
+                let kickDirection = (player.x < enemy.x) ? 1 : -1;
+                enemy.setVelocityX(velocityX * speedMultiplier * 2 * kickDirection);
+            } else if (enemy.isSliding) {
+                // 第三踩：踩停滑行中的龜殼
+                this.goombaStompSound.play();
+                enemy.isSliding = false;
+                enemy.setVelocityX(0);
+            }
+        }
+    } 
+    // 判定：側面撞擊 (玩家沒有踩踏)
+    else {
+        if (enemy.type === 'koopa' && enemy.isShell && !enemy.isSliding) {
+            // 從側面觸碰靜止龜殼：踢出
+            this.kickSound.play();
+            enemy.isSliding = true;
+            let kickDirection = (player.x < enemy.x) ? 1 : -1;
+            enemy.setVelocityX(velocityX * speedMultiplier * 2 * kickDirection);
+        } else {
+            // 撞到活著的怪物 或 滑行中的龜殼 ➔ 玩家受傷/死亡
+            if (!playerInvulnerable) {
+                gameOver = true;
+                gameOverFunc.call(this);
+            }
+        }
+    }
+}
+
+// === 龜殼保齡球擊殺邏輯 ===
+function shellHitEnemy(shell, targetEnemy) {
+    if (!shell.isSliding || targetEnemy.dead || targetEnemy === shell) return;
+    
+    // 龜殼撞擊音效與加分
+    this.kickSound.play();
+    addToScore.call(this, 200, targetEnemy);
+    
+    // 目標被擊飛 (物理表現)
+    targetEnemy.dead = true;
+    targetEnemy.flipY = true;
+    targetEnemy.body.checkCollision.none = true;
+    targetEnemy.setVelocityX(shell.body.velocity.x * 0.5);
+    targetEnemy.setVelocityY(-levelGravity / 3);
+    
+    setTimeout(() => { targetEnemy.destroy(); }, 1000);
+}
