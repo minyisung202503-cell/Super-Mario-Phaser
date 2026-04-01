@@ -636,8 +636,27 @@ function collectCoin(player, coin) {
 function update(delta) {
     if (gameOver || gameWinned) return;
 
+    // ==========================================
+    // 1. 偵測加速指令 (觸控右半螢幕 或 按住 Shift 鍵)
+    // ==========================================
+    let pointer = this.input.activePointer;
+    // 判斷：是否有按壓 且 按壓位置在螢幕右半邊
+    let isTouchingRightSide = pointer.isDown && pointer.x > (screenWidth / 2);
+    let isShiftDown = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT).isDown;
+
+    // 如果符合任一條件，啟動 1.5 倍加速
+    let isDashing = isTouchingRightSide || isShiftDown;
+    let dashBoost = isDashing ? 1.5 : 1.0; 
+
+    // ==========================================
+    // 2. 動態覆寫瑪利歐的物理極速
+    // ==========================================
+    playerController.speed.run = velocityX * speedMultiplier * dashBoost;
+
+    // 執行原作者隱藏的玩家物理更新
     updatePlayer.call(this, delta);
-    // 新增：火之花全自動連發機制
+
+    // 火之花全自動連發機制
     if (playerState === 2 && !fireInCooldown && !playerBlocked) {
         throwFireball.call(this);
     }
@@ -655,21 +674,26 @@ function update(delta) {
         if (!playerBlocked && this.gameTimeCount > 2000) {
             let safeDelta = Math.min(delta, 33);
             
-            // 攝影機捲動速度也套用倍率，永遠保持 45% 的追隨比例
-            const scrollSpeed = (velocityX * speedMultiplier * 0.45 * safeDelta) / 1000;
+            // ==========================================
+            // 3. 攝影機推進速度同步套用加速倍率
+            // ==========================================
+            const scrollSpeed = (velocityX * speedMultiplier * dashBoost * 0.45 * safeDelta) / 1000;
             camera.scrollX += scrollSpeed;
 
+            // 死亡判定：被畫面左側邊緣吞噬
             if (player.x < camera.scrollX - 15) {
                 gameOver = true;
                 gameOverFunc.call(this);
                 return;
             }
 
+            // 畫面推進極限：不讓瑪利歐超出畫面右半邊
             if (player.x > camera.scrollX + (screenWidth * 0.6)) {
                 camera.scrollX = player.x - (screenWidth * 0.6);
             }
         }
 
+        // 抵達終點判定
         if (!isLevelOverworld && player.x >= worldWidth - screenWidth * 1.5) {
             reachedLevelEnd = true;
         }
