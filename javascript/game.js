@@ -297,9 +297,9 @@ function create() {
 
     generateLevel.call(this);
     drawWorld.call(this);
-    //createGoombas.call(this);
+    createGoombas.call(this);
     //change
-    spawnMonsters.call(this); 
+    //spawnMonsters.call(this); 
     createControls.call(this);
     applySettings.call(this);
     
