@@ -639,9 +639,18 @@ function update(delta) {
     // ==========================================
     // 1. 偵測加速指令 (觸控右半螢幕 或 按住 Shift 鍵)
     // ==========================================
-    let pointer = this.input.activePointer;
+    //let pointer = this.input.activePointer;
     // 判斷：是否有按壓 且 按壓位置在螢幕右半邊
-    let isTouchingRightSide = pointer.isDown && pointer.x > (screenWidth / 2);
+    //let isTouchingRightSide = pointer.isDown && pointer.x > (screenWidth / 2);
+
+    // ==========================================
+    // 1. 偵測加速指令 (多點觸控支援版)
+    // ==========================================
+    // 使用 .some() 掃描所有碰到螢幕的手指，只要有「任何一根」在右半邊，就回傳 true
+    let isTouchingRightSide = this.input.manager.pointers.some(pointer => 
+        pointer.isDown && pointer.x > (screenWidth / 2)
+    );
+    
     let isShiftDown = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT).isDown;
 
     // 如果符合任一條件，啟動 1.5 倍加速
