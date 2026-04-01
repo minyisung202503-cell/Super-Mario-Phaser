@@ -297,7 +297,9 @@ function create() {
 
     generateLevel.call(this);
     drawWorld.call(this);
-    createGoombas.call(this);
+    //createGoombas.call(this);
+    //change
+    spawnMonsters.call(this); 
     createControls.call(this);
     applySettings.call(this);
     
@@ -674,7 +676,7 @@ function update(delta) {
     }
 }
 
-function createGoombas() {
+function spawnMonsters() {
     // 1. 註冊烏龜與龜殼的專屬動畫 (確保只註冊一次)
     if (!this.anims.exists('koopa-walk')) {
         this.anims.create({ key: 'koopa-walk', frames: this.anims.generateFrameNumbers('koopa', { start: 0, end: 1 }), frameRate: 5, repeat: -1 });
