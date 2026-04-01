@@ -256,8 +256,8 @@ function create() {
     if (localStorage.getItem('mario_state')) { playerState = parseInt(localStorage.getItem('mario_state')); } 
     else { playerState = 0; }
 
-    // ==========================================
-    // 核心重構：動態難度系統 (讀取關卡並計算倍率)
+// ==========================================
+    // 核心重構：帶有物理極限的指數級難度系統
     // ==========================================
     if (localStorage.getItem('mario_level')) {
         currentLevel = parseInt(localStorage.getItem('mario_level'));
@@ -265,10 +265,16 @@ function create() {
         currentLevel = 0;
     }
     
-    // 每過一關，整體速度增加 10% (例如第3關就是 1.3 倍速)
-    //speedMultiplier = 1 + (currentLevel * 0.1);
-    speedMultiplier = currentLevel ;
-    console.log(`目前關卡: ${currentLevel + 1}, 速度倍率: ${speedMultiplier}x`);
+    // 設定參數：
+    // growthRate = 1.15 (每過一關，速度是指數級的 1.15 倍，而非加 0.1)
+    // maxSpeedLimit = 2.5 (絕對極限：最高不超過基礎速度的 2.5 倍)
+    const growthRate = 1.15;
+    const maxSpeedLimit = 2.5;
+
+    // 算式：取 [指數成長結果] 與 [最高極限] 兩者間的「最小值」
+    speedMultiplier = Math.min(maxSpeedLimit, Math.pow(growthRate, currentLevel));
+    
+    console.log(`目前關卡: ${currentLevel + 1}, 指數速度倍率: ${speedMultiplier.toFixed(2)}x`);
 
     playerController = {
         time: { leftDown: 0, rightDown: 0 },
